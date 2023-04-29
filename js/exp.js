@@ -158,14 +158,14 @@ var exp = (function() {
             type: jsPsychSurveyMultiChoice,
             questions: [
                 {
-                    prompt: `You'll be rating two games in terms of how immersive and engaging they are.<br>When doing so, what should you report?`,
+                    prompt: `What does it mean for a game to be immersive and engaging?`,
                     name: `defineFlow`,
-                    options: [`How much you enjoyed the games.`, `How much money your earned while playing the games`, `How much the games captured your attention and sucked you in.`],
+                    options: [`"It means that I enjoyed the game."`, `"It means that I won a lot of money by playing the game."`, `"It means that the game captured my attention and sucked me in."`],
                     requires: true,
                     horizontal: false,
                 }],
             on_finish: (data) => {
-                const correctAnswers = [`How much the games captured your attention and sucked you in.`];
+                const correctAnswers = [`"It means that the game captured my attention and sucked me in."`];
                 const totalErrors = dmPsych.getTotalErrors(data, correctAnswers);
                 data.totalErrors = totalErrors;
             }
