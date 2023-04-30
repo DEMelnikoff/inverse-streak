@@ -1,7 +1,7 @@
 const dmPsych = (function() {
   'use strict';
 
-  const keys = {};
+  const obj = {};
 
  /*
   *
@@ -36,7 +36,7 @@ const dmPsych = (function() {
   jsPsych.data.addProperties({ subject: subject_id, boot: false });
 
   // define file name
-  keys.filename = `${subject_id}.csv`;
+  obj.filename = `${subject_id}.csv`;
 
   // define completion code for Prolific
   const completionCode = "CB1K8YPV";
@@ -48,7 +48,7 @@ const dmPsych = (function() {
   */
 
   // save survey data in wide format
-  keys.saveSurveyData = (data) => {
+  obj.saveSurveyData = (data) => {
     const names = Object.keys(data.response);
     const values = Object.values(data.response);
     for(let i = 0; i < names.length; i++) {
@@ -57,15 +57,110 @@ const dmPsych = (function() {
   };
 
   // compute total number of errors on questionnaires
-  keys.getTotalErrors = (data, correctAnswers) => {
+  obj.getTotalErrors = (data, correctAnswers) => {
     const answers = Object.values(data.response);
     const errors = answers.map((val, index) => val === correctAnswers[index] ? 0 : 1)
     const totalErrors = errors.reduce((partialSum, a) => partialSum + a, 0);
     return totalErrors;
   };
-                  
+
   // create tile game
-  keys.MakeTileGame = function({val, plural, hex, tileHit, tileMiss, roundLength}, gameType, nTrials, pM, showBonus, blockName) {
+  obj.MakeTileGame = function({val, plural, hex, tileHit, tileMiss, roundLength}, gameType, nTrials, pM, blockName) {
+
+    const drawFireworks = function (c, duration, maxFireworks, message) {
+
+      // get start time
+      const start = Date.now();
+
+      // get context
+      let ctx = c.getContext('2d');
+
+      // get text variables
+      const lines = message.split('\n');
+
+      const maxSparks = Math.min(maxFireworks*5, 60);
+      let fireworks = [];
+     
+      for (let i = 0; i < maxFireworks; i++) {
+        let firework = {
+          sparks: []
+        };
+        for (let n = 0; n < maxSparks; n++) {
+          let spark = {
+            vx: Math.random() * 5 + .5,
+            vy: Math.random() * 5 + .5,
+            weight: Math.random() * .3 + .03,
+            red: Math.floor(Math.random() * 2 + 1),
+            green: Math.floor(Math.random() * 2 + 1),
+            blue: Math.floor(Math.random() * 2 + 1)
+          };
+          if (Math.random() > .5) spark.vx = -spark.vx;
+          if (Math.random() > .5) spark.vy = -spark.vy;
+          firework.sparks.push(spark);
+        }
+        fireworks.push(firework);
+        resetFirework(firework);
+      }
+
+      let myReq = window.requestAnimationFrame(explode);
+     
+      function resetFirework(firework) {
+        firework.x = Math.floor(Math.random() * c.width);
+        firework.y = c.height;
+        firework.age = 0;
+        firework.phase = 'fly';
+      };
+       
+      function explode() {
+        ctx.clearRect(0, 0, c.width, c.height);
+        fireworks.forEach((firework,index) => {
+          if (firework.phase == 'explode') {
+              firework.sparks.forEach((spark) => {
+              for (let i = 0; i < 10; i++) {
+                let trailAge = firework.age + i;
+                let x = firework.x + spark.vx * trailAge;
+                let y = firework.y + spark.vy * trailAge + spark.weight * trailAge * spark.weight * trailAge;
+                let fade = i * 10 + firework.age * 2 + 50;
+                let r = Math.floor(spark.red * fade * 1);
+                let g = Math.floor(spark.green * fade * 1);
+                let b = Math.floor(spark.blue * fade * 1);
+                ctx.beginPath();
+                ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',1)';
+                ctx.rect(x, y, 5, 5);
+                ctx.fill();
+              }
+            });
+            firework.age++;
+            if (firework.age > 100 && Math.random() < .05) {
+              resetFirework(firework);
+            }
+          } else {
+            firework.y = firework.y - 10;
+            for (let spark = 0; spark < 15; spark++) {
+              ctx.beginPath();
+              ctx.fillStyle = 'rgba(' + (3 + index) * 50 + ',' + (3 + spark) * 17 + ',0,1)';
+              ctx.rect(firework.x + Math.random() * spark - spark / 2, firework.y + spark * 4, 5, 5);
+              ctx.fill();
+            }
+            if (Math.random() < .001 || firework.y < 200) firework.phase = 'explode';
+          }
+        });
+
+        for (let i = 0; i<lines.length; i++) {
+          ctx.fillStyle = 'black';
+          ctx.font = ["normal 30pt Arial", "normal 80pt Arial"][i]
+          let lineWidths = lines.map(x => ctx.measureText(x).width);
+          ctx.fillText(lines[i], (c.width/2) - (lineWidths[i]/2), c.height/2 + (i*120) - 60);
+        }
+
+        if (Date.now() - start < duration) { //note this also
+          myReq = window.requestAnimationFrame(explode);
+        } else {
+          cancelAnimationFrame(myReq);
+        };        
+      };
+
+    };
 
     let losses = 0, streak = 0, trialNumber = 0, tooSlow = null, tooFast = null;
 
@@ -152,16 +247,18 @@ const dmPsych = (function() {
     };
 
     const feedback = {
-      type: jsPsychHtmlKeyboardResponse,
+      type: jsPsychCanvasKeyboardResponse,
       data: {trial_type: `feedback`, block: blockName},
-      stimulus: function() { 
+      canvas_size: [700, 900],
+      stimulus: function(c) { 
+        let maxFireworks, message;
         if (gameType == 'bern') {
           if (tooSlow) {
-            let reward = showBonus ? `<p>+0 cents</p>` : ``;
-            return `<div style='font-size:35px'><p>You missed</p>${reward}<p><br></p><p>(Get ready for the next tile!)</p></div>`;
+            maxFireworks = 0;
+            message = 'You missed';
           } else {
-            let reward = showBonus ? `<p>+${val} cent${plural}</p>` : ``;
-            return `<div style='font-size:35px'><p>You activated it!</p>${reward}<p><br></p><p>(Get ready for the next tile!)</p></div>`;
+            maxFireworks = blockType == 'practice' ? 0 : 5;
+            message = 'You activated it!'
           };
         }; 
         if (gameType == 'invStrk') {
@@ -169,32 +266,36 @@ const dmPsych = (function() {
             losses++;
             let triesLeft = roundLength - losses;
             let tryText = triesLeft == 1 ? "Chance" : "Chances";
-            return `<div style='font-size:35px'><p>Attempts this round:</p><p><span style='color:${hex}; font-size:60px'>${losses}</span></p></div>`;
+            maxFireworks = 0;
+            message = 'Attempts this round:\n' + String(losses);
           } else if (tooSlow && losses == 4) {
             losses = 0;
-            return `<div style='font-size:35px'><p>You lost the round</p><p><span style='color:${hex}; font-size:60px'>+0 cents</span></p><p><br></p><p>(Get ready for the next round!)</p></div>`;
+            maxFireworks = 0;
+            message = 'You lost this round';
           } else {
-            let winIdx = ['1st', '2nd', '3rd', '4th', '5th'][losses];
-            let earnings = ['4', '3', '2', '1', '.5'][losses];
+            let winIdx = ['1', '2', '3', '4', '5'][losses];
+            maxFireworks = [16, 8, 4, 2, 1][losses];
+            message = 'You won on attempt\n#' + winIdx;
             losses = 0;
-            let reward = showBonus ? `<p><span style='color:${hex}; font-size:60px'>+${earnings} cent${plural}</span></p>` : ``;
-            return `<div style='font-size:35px'><p>You won on your <strong>${winIdx}</strong> attempt!</p>${reward}<p><br></p><p>(Get ready for the next round!)</p></div>`;
           };
         };
         if (gameType == 'strk') {
           if (tooSlow && streak > 0) {
             let finalStreak = streak;
             streak = 0;
-            let reward = showBonus ? `<p><span style='color:${hex}; font-size:60px'>+${finalStreak * val} cents</span></p>` : ``;
-            return `<div style='font-size:35px'><p>Your streak was ${finalStreak}</p>${reward}</div>`;
+            maxFireworks = finalStreak;
+            message = 'Your streak was\n' + String(finalStreak);
           } else {
             if (!tooSlow) { streak++ };
-            return `<div style='font-size:35px'><p>Current Streak:</p><p><span style='color:${hex}; font-size:60px'>${streak}</span></p></div>`;
+            maxFireworks = 0;
+            message = 'Current Streak\n' + String(streak);
           };
         };
+
+        return drawFireworks(c, 3000, maxFireworks, message)
       },
       choices: "NO_KEYS",
-      trial_duration: 2000,
+      trial_duration: 3000,
       on_finish: (data) => {
         trialNumber++;
         if (trialNumber == nTrials) { 
@@ -216,7 +317,7 @@ const dmPsych = (function() {
   };
 
   // make n-dimensional array of RTs given p(hit) = p
-  keys.makeRT = function(n, p) {
+  obj.makeRT = function(n, p) {
 
     const nDraws = Math.floor(n * p);  // set number of draws from geometric distribution
     const maxWinStrk = Math.ceil((nDraws*1.5)/(n-nDraws));  // set length of longest win streak at the trial level
@@ -276,7 +377,7 @@ const dmPsych = (function() {
   };
 
   // spinner task
-  keys.spinner = function(canvas, spinnerData, score, sectors) {
+  obj.spinner = function(canvas, spinnerData, score, sectors) {
 
     /* get context */
     const ctx = canvas.getContext("2d"); 
@@ -493,7 +594,8 @@ const dmPsych = (function() {
     }, true);
   };
 
-  keys.holeInOne = (function () {
+  // function for drawing hole in one game on canvas
+  obj.holeInOne = (function () {
 
     var game = {};
 
@@ -737,14 +839,15 @@ const dmPsych = (function() {
 
   }());
 
+
  /*
   *
   *  David's text functions
   *
   */
 
-  keys.consentForm = function({basePay}) {
-    const html = `<div class='parent' style='height: 1000px; width: 1000px'>
+  obj.consentForm = function({basePay}) {
+    const html = [`<div class='parent' style='height: 1000px; width: 1000px'>
         <p><b>Adult Consent for Participation in a Research Project<br>
         200 FR 2 (2017-1)</b><br>
         Study Title: Choices, decisions, and pursuits<br>
@@ -772,35 +875,19 @@ const dmPsych = (function() {
         <p><b>Questions:</b><br>
         If you have any questions about this study, you may contact the principal investigator, Paul Stillman, (paul.stillman@yale.edu). If you would like to talk with someone other than the researchers to discuss problems or concerns, to discuss situations in the event that a member of the research team is not available, or to discuss your rights as a research participant, you may contact the Yale University Human Subjects Committee, 203-785-4688, human.subjects@yale.edu. Additional information is available at http://your.yale.edu/research-support/human-research/research-participants</p>
 
-        <p>Would you like to continue to the study? Press the "Next" button to indicate that you consent to participate in the study.</p>`
+        <p>Would you like to continue to the study? Press the "Next" button to indicate that you consent to participate in the study.</p>`]
     return html;
   };
 
-  keys.intro_tileGame = function({basePay}) {
+  obj.intro_tileGame = function({basePay}) {
       const html = [`<div class='parent'>
           <p>Thank you for playing Hole in One!</p>
           <p>Next, you'll play a different game called the Tile Game.</p>
-          <p>When you are ready, please continue.</p></div>`,
-
-          `<div class='parent'>
-          <p>During the Tile Game, you'll have opportunities to earn money.</p>
-          <p>All of the money you win during the Tile Game will be added to
-          a "bonus fund,"<br>which you'll receive at the end of the study.</p>
-          <p>Your total payment will be $${basePay} for your participation, plus all of the money in your bonus fund.</p>
-          </div>`];
+          <p>When you are ready, please continue.</p></div>`];
       return html;
   };
 
-  keys.preTask_tileGame = function() {
-      const html = [`<div class='parent'>
-          <p>You are now ready to play the Tile Game.</p>
-          <p>Once you proceed, the Tile Game will start, so get ready to press your SPACEBAR.</p>
-          <p>Continue to begin.</p>
-          </div>`];
-      return html;
-  };
-
-  keys.prePractice_tileGame = function({gameType, val, span, color, hex}) {
+  obj.prePractice_tileGame = function({gameType, val, span, color, hex}) {
 
       let html;
 
@@ -932,14 +1019,14 @@ const dmPsych = (function() {
       return html;
   };
 
-  keys.practiceComplete_tileGame = function() {
+  obj.practiceComplete_tileGame = function() {
       const html = [`<div class='parent'>
         <p>Practice is now complete.<br>
         Next, you'll complete the full version of the Tile Game.</p></div>`];
       return html;
   };
 
-  keys.postPractice_tileGame = function({gameType, pM, val, plural}) {
+  obj.postPractice_tileGame = function({gameType, pM, val, plural, nTrials}) {
 
       let html;
 
@@ -947,25 +1034,24 @@ const dmPsych = (function() {
 
       if (gameType == 'invStrk') {
           html = [`<div class='parent'>
-              <p>The full version of the Tile Game differs from the practice version in two ways.</p>
+              <p>The full version of the Tile Game differs from the practice version in three ways.</p>
               </div>`,
 
               `<div class='parent'>
-              <p>First, in the full version of the Tile Game you can earn bonus money<br>
-              by activating the tile in as few attempts as possible. Specifically, you'll earn:</p>
-              <ul style="text-align: left; margin-left: 150px">
-                  <li><strong>4 cents</strong> if you activate the tile on your 1st attempt</li>
-                  <li><strong>3 cents</strong> if you activate the tile on your 2nd attempt</li>
-                  <li><strong>2 cents</strong> if you activate the tile on your 3rd attempt</li>
-                  <li><strong>1 cent</strong> if you activate the tile on your 4th attempt</li>
-                  <li><strong>.5 cents</strong> if you activate the tile on your 5th attempt</li>
-                  <li><strong>0 cents</strong> if you fail to activate the tile before the round is complete.</li>
-              </ul>
-              </div>`,
-
-              `<div class='parent'>
-              <p>Second, the full version of the Tile Game will be ${easierOrHarder} than the practice version.<br>
+              <p>First, the full version of the Tile Game will be ${easierOrHarder} than the practice version.<br>
               Specifically, most players succeed at activating the tile <strong>${pM*100}%</strong> of the time.</p>
+              </div>`,
+
+              `<div class='parent'>
+              <p>Second, the full version of the Tile Game will be longer than the practice version.<br>
+              Specifically, you will have ${nTrials} chances to activate the tile.</p>
+              </div>`,              
+
+              `<div class='parent'>
+              <p>Third, in the full version of the Tile Game you'll be rewarded with a<br>
+              firewords display each time you activate the tile.</p>
+              <p>The amount of fireworks you get depends on the number of attempts you take the activate the tile.<br>
+              Specifically, the fewer attempts you take to activate the tile, the more fireworks you'll get!</p>
               </div>`];
       };
 
@@ -975,20 +1061,35 @@ const dmPsych = (function() {
               </div>`,
 
               `<div class='parent'>
-              <p>First, in the full version of the Tile Game, winning streaks are worth money.</br>
-              The longer the streak, the more money it's worth.</p>
-              <p>Specifically, ${val} cent${plural} will be added to your bonus fund for each consecutive tile you activate.</p> 
+              <p>First, the full version of the Tile Game will be ${easierOrHarder} than the practice version.<br>
+              Specifically, most players succeed at activating the tile <strong>${pM*100}%</strong> of the time.</p>
               </div>`,
 
               `<div class='parent'>
-              <p>Second, the full version of the Tile Game will be ${easierOrHarder} than the practice version.<br>
-              Specifically, most players succeed at activating the tile <strong>${pM*100}%</strong> of the time.</p>
+              <p>Second, the full version of the Tile Game will be longer than the practice version.<br>
+              Specifically, you will have ${nTrials} chances to activate the tile.</p>
+              </div>`,     
+
+              `<div class='parent'>
+              <p>Third, in the full version of the Tile Game you'll be rewarded with a<br>
+              firewords display each time you end a streak.</p>
+              <p>The amount of fireworks you get depends on the length of your streak.<br>
+              Specifically, the longer your streak, the more fireworks you'll get when it ends!</p>
               </div>`];
       };
 
       return html;
   };
 
-  return keys
+  obj.preTask_tileGame = function() {
+      const html = [`<div class='parent'>
+          <p>You are now ready to play the Tile Game.</p>
+          <p>Once you proceed, the Tile Game will start, so get ready to press your SPACEBAR.</p>
+          <p>Continue to begin.</p>
+          </div>`];
+      return html;
+  };
+
+  return obj
 
 }());

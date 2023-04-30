@@ -192,13 +192,13 @@ var exp = (function() {
 
     // create instruction nodes
 
-    p.surveyIntro = new MakeSurveyIntro()
-
     p.consent = {
         type: jsPsychInstructions,
         pages: dmPsych.consentForm(settings),
         show_clickable_nav: true,
     };
+
+    p.surveyIntro = new MakeSurveyIntro();
 
     p.preFull_task1 = {
         type: jsPsychInstructions,
@@ -255,7 +255,7 @@ var exp = (function() {
         wall_xPos: .9,
         hole_size: 75,
         friction: .02,
-        tension: .008,
+        tension: .01,
         prompt: `<div class='instructions'>
 
         <p><strong>Hole in One</strong>. The goal of Hole in One is to shoot the ball through the hole.<br>
@@ -264,9 +264,9 @@ var exp = (function() {
         data: {block: 'holeInOne'}
     };
 
-    p.practice2 = new dmPsych.MakeTileGame(settings, settings.gameType, 10, .5, false, 'practice');
+    p.practice2 = new dmPsych.MakeTileGame(settings, settings.gameType, 10, .5, 'practice');
 
-    p.task2 = new dmPsych.MakeTileGame(settings, settings.gameType, settings.nTrials, settings.pM, true, 'tileGame');
+    p.task2 = new dmPsych.MakeTileGame(settings, settings.gameType, settings.nTrials, settings.pM, 'tileGame');
 
 
    /*
@@ -446,7 +446,8 @@ var exp = (function() {
 
 }());
 
-const timeline = [exp.surveyIntro, exp.preFull_task1, exp.task1, exp.task1_Qs,
+const timeline = [exp.consent,
+    exp.surveyIntro, exp.preFull_task1, exp.task1, exp.task1_Qs,
     exp.intro_task2, exp.prePractice_task2, exp.practice2, exp.practiceComplete, exp.postPractice_task2, 
     exp.preTask_task2, exp.task2, exp.task2_Qs,
     exp.demographics, exp.save_data];
