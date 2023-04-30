@@ -37,80 +37,66 @@ var exp = (function() {
     */
 
     // constructor function for presenting post-practice tile game information and assessing comprehension
-    function MakePostPractice_tileGame({gameType, pM, val, plural}) {
+    function MakePostPractice_tileGame({gameType, pM, val, plural, nTrials}) {
 
         const info = {
             type: jsPsychInstructions,
-            pages: dmPsych.postPractice_tileGame({gameType, pM, val, plural}),
+            pages: dmPsych.postPractice_tileGame({gameType, pM, val, plural, nTrials}),
             show_clickable_nav: true,
         };
 
-        const compChk1 = {
-            type: jsPsychSurveyHtmlForm,
+        let a1, a2, a3, a4, q2;
+
+        if (gameType == 'invStrk') {
+            a1 = 'Activate the tile in as few attempts as possible'
+            a2 = '...the more fireworks you will receive.';
+            a3 = String(pM*100) + '%';
+            a4 = String(nTrials);
+            q2 = 'The fewer attempts you take to activate the tile...';
+        }
+
+        if (gameType == 'strk') {
+            a1 = 'Activate the tile as many times in a row as possible'
+            a2 = '...the more fireworks you will receive.';
+            a3 = String(pM*100) + '%';
+            a4 = String(nTrials);
+            q2 = 'The longer your streak...';            
+        }
+
+        const compChk = {
+            type: jsPsychSurveyMultiChoice,
             preamble: `<div style="font-size:16px"><p>To make sure you understand the full version of <strong>The Tile Game</strong>, please answer the following question:</p></div>`,
-            html: `<div class='parent' style="height: 300px; font-size: 16px">
-                <p>For most players, what is the probability of activating the tile?</p>
-                <select name="attnChk1" style="font-size: 16px"><option value="0">0%</option><option value="13">13%</option><option value="50">50%</option><option value="87">87%</option><option value="100">100%</option></select>
-                </div>`,
+            questions: [
+                {
+                  prompt: 'What is the goal of the Tile Game?', 
+                  name: 'goalChk', 
+                  options: ['Activate the tile in as few attempts as possible', 'Activate the tile as many times in a row as possible', 'Activate the tile as many times in total as possible'], 
+                  required: true
+                },
+                {
+                  prompt: q2, 
+                  name: 'fireworksChk', 
+                  options: ['...the more fireworks you will receive.', '...the sooner the game will end.', '...the more points you will accumulate.'], 
+                  required: true
+                },
+                {
+                  prompt: 'For most players, what is the probability of activating the tile?', 
+                  name: 'probChk', 
+                  options: ['0%', '13%', '50%', '87%', '100%'], 
+                  required: true
+                },
+                {
+                  prompt: 'How many opportunities will you have to activate the tile?', 
+                  name: 'nChk', 
+                  options: ['22', '42', '62', '82', '102'], 
+                  required: true
+                },
+            ],
             on_finish: (data) => {
-                const correctAnswers = [String(pM*100)]
+                const correctAnswers = [a1, a2, a3, a4];
                 const totalErrors = dmPsych.getTotalErrors(data, correctAnswers);
                 data.totalErrors = totalErrors;
             }
-        };
-
-        let compChk2;
-
-        if (gameType == 'invStrk') {
-            compChk2 = {
-                type: jsPsychSurveyHtmlForm,
-                preamble: `<div style="font-size:16px"><p>To make sure you understand the full version of <strong>The Tile Game</strong>, please answer the following questions:</p></div>`,
-                html: `<div class='parent' style='height:600px; font-size: 16px'>
-                    <p>If you activate the tile on your 1st of 5 attempts, how much money will you win?</p>
-                    <select name="attnChk2" style="font-size: 16px"><option value="" selected disabled hidden>Choose here</option><option value="4">4 cents</option><option value="3">3 cents</option><option value="2">2 cents</option><option value="1">1 cent</option><option value=".5">.5 cents</option><option value="0">0 cents</option></select>
-                    <p>If you activate the tile on your 2nd of 5 attempts, how much money will you win?</p>
-                    <select name="attnChk3" style="font-size: 16px"><option value="" selected disabled hidden>Choose here</option><option value="4">4 cents</option><option value="3">3 cents</option><option value="2">2 cents</option><option value="1">1 cent</option><option value=".5">.5 cents</option><option value="0">0 cents</option></select>
-                    <p>If you activate the tile on your 3rd of 5 attempts, how much money will you win?</p>
-                    <select name="attnChk4" style="font-size: 16px"><option value="" selected disabled hidden>Choose here</option><option value="4">4 cents</option><option value="3">3 cents</option><option value="2">2 cents</option><option value="1">1 cent</option><option value=".5">.5 cents</option><option value="0">0 cents</option></select>
-                    <p>If you activate the tile on your 4th of 5 attempts, how much money will you win?</p>
-                    <select name="attnChk5" style="font-size: 16px"><option value="" selected disabled hidden>Choose here</option><option value="4">4 cents</option><option value="3">3 cents</option><option value="2">2 cents</option><option value="1">1 cent</option><option value=".5">.5 cents</option><option value="0">0 cents</option></select>
-                    <p>If you activate the tile on your 5th of 5 attempts, how much money will you win?</p>
-                    <select name="attnChk6" style="font-size: 16px"><option value="" selected disabled hidden>Choose here</option><option value="4">4 cents</option><option value="3">3 cents</option><option value="2">2 cents</option><option value="1">1 cent</option><option value=".5">.5 cents</option><option value="0">0 cents</option></select>
-                    <p>If you fail to activate the tile before the round ends, how much money will you win?</p>
-                    <select name="attnChk7" style="font-size: 16px"><option value="" selected disabled hidden>Choose here</option><option value="4">4 cents</option><option value="3">3 cents</option><option value="2">2 cents</option><option value="1">1 cent</option><option value=".5">.5 cents</option><option value="0">0 cents</option></select>
-                    </div>`,
-                on_finish: (data) => {
-                    const correctAnswers = ['4', '3', '2', '1', '.5', '0'];
-                    const totalErrors = dmPsych.getTotalErrors(data, correctAnswers);
-                    data.totalErrors = totalErrors;
-                }
-            };
-        };
-
-        if (gameType == 'strk') {
-            compChk2 = {
-                type: jsPsychSurveyHtmlForm,
-                preamble: `<div style="font-size:16px"><p>To make sure you understand the full version of <strong>The Tile Game</strong>, please answer the following questions:</p></div>`,
-                html: `<div class='parent' style='height:600px; font-size: 16px'>
-                    <p>If you activate the tile 0 times in a row, how much money will you win?</p>
-                    <select name="attnChk2" style="font-size: 16px"><option value="" selected disabled hidden>Choose here</option><option value="0">0 cents</option><option value="6">6 cents</option><option value="12">12 cents</option><option value="18">18 cent</option><option value="24">24 cents</option><option value="30">30 cents</option></select>
-                    <p>If you activate the tile 1 time in a row, how much money will you win?</p>
-                    <select name="attnChk3" style="font-size: 16px"><option value="" selected disabled hidden>Choose here</option><option value="0">0 cents</option><option value="6">6 cents</option><option value="12">12 cents</option><option value="18">18 cent</option><option value="24">24 cents</option><option value="30">30 cents</option></select>
-                    <p>If you activate the tile 2 times in a row, how much money will you win?</p>
-                    <select name="attnChk4" style="font-size: 16px"><option value="" selected disabled hidden>Choose here</option><option value="0">0 cents</option><option value="6">6 cents</option><option value="12">12 cents</option><option value="18">18 cent</option><option value="24">24 cents</option><option value="30">30 cents</option></select>
-                    <p>If you activate the tile 3 times in a row, how much money will you win?</p>
-                    <select name="attnChk5" style="font-size: 16px"><option value="" selected disabled hidden>Choose here</option><option value="0">0 cents</option><option value="6">6 cents</option><option value="12">12 cents</option><option value="18">18 cent</option><option value="24">24 cents</option><option value="30">30 cents</option></select>
-                    <p>If you activate the tile 4 time in a row, how much money will you win?</p>
-                    <select name="attnChk6" style="font-size: 16px"><option value="" selected disabled hidden>Choose here</option><option value="0">0 cents</option><option value="6">6 cents</option><option value="12">12 cents</option><option value="18">18 cent</option><option value="24">24 cents</option><option value="30">30 cents</option></select>
-                    <p>If you activate the tile 5 times in a row, how much money will you win?</p>
-                    <select name="attnChk7" style="font-size: 16px"><option value="" selected disabled hidden>Choose here</option><option value="0">0 cents</option><option value="6">6 cents</option><option value="12">12 cents</option><option value="18">18 cent</option><option value="24">24 cents</option><option value="30">30 cents</option></select>
-                    </div>`,
-                on_finish: (data) => {
-                    const correctAnswers = ['0', '6', '12', '18', '24', '30'];
-                    const totalErrors = dmPsych.getTotalErrors(data, correctAnswers);
-                    data.totalErrors = totalErrors;
-                }
-            };
         };
 
         const errorMessage = {
@@ -122,14 +108,16 @@ var exp = (function() {
         const conditionalNode = {
             timeline: [errorMessage],
             conditional_function: () => {
-                const fail = jsPsych.data.get().last(2).select('totalErrors').sum() > 0 ? true : false;
+                console.log(jsPsych.data.get().last(1).select('totalErrors').sum());
+                const fail = jsPsych.data.get().last(1).select('totalErrors').sum() > 0 ? true : false;
                 return fail;
             }
         };
 
-        this.timeline = [info, compChk1, compChk2, conditionalNode];
+        this.timeline = [info, compChk, conditionalNode];
         this.loop_function = () => {
-            const fail = jsPsych.data.get().last(3).select('totalErrors').sum() > 0 ? true : false;
+            console.log(jsPsych.data.get().last(2).select('totalErrors').sum());
+            const fail = jsPsych.data.get().last(2).select('totalErrors').sum() > 0 ? true : false;
             return fail;
         };
     };
@@ -446,10 +434,9 @@ var exp = (function() {
 
 }());
 
-const timeline = [exp.consent,
-    exp.surveyIntro, exp.preFull_task1, exp.task1, exp.task1_Qs,
-    exp.intro_task2, exp.prePractice_task2, exp.practice2, exp.practiceComplete, exp.postPractice_task2, 
-    exp.preTask_task2, exp.task2, exp.task2_Qs,
+const timeline = [exp.consent, exp.surveyIntro, 
+    exp.preFull_task1, exp.task1, exp.task1_Qs,
+    exp.intro_task2, exp.prePractice_task2, exp.practice2, exp.practiceComplete, exp.postPractice_task2, exp.preTask_task2, exp.task2, exp.task2_Qs,
     exp.demographics, exp.save_data];
 
 // initiate timeline

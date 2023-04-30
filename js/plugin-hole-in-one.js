@@ -133,7 +133,8 @@ var dmPsychHoleInOne = (function (jspsych) {
       // draw
       display_element.innerHTML = new_html;
       let c = document.getElementById("jspsych-canvas-stimulus")
-      trial.stimulus(c, trial)
+      let req
+      trial.stimulus(c, trial);
 
       // function to end trial when it is time
       const endTrial = () => {
@@ -143,6 +144,7 @@ var dmPsychHoleInOne = (function (jspsych) {
 
         // stop listening for last trial
         clearInterval(listenForLastTrial);
+        cancelAnimationFrame(req);
 
         // kill keyboard listeners
         if (trial.allow_keys) {

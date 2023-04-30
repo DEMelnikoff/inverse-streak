@@ -17,6 +17,7 @@ const dmPsych = (function() {
       const basePay = jsPsych.data.get().select('basePay').values[0]
       const bonusEarnings = (totalWins * bonus) / 100
       let boot = jsPsych.data.get().last(1).select('boot').values[0];
+      jsPsych.data.addProperties({fpsAdjust: fpsAdjust});
       if(!boot) {
         document.body.innerHTML = 
         `<div align='center' style="margin: 10%">
@@ -25,7 +26,7 @@ const dmPsych = (function() {
             <br>You will receive your bonus, in addition to <strong>$${basePay}</strong> for your participation, within 48 hours.<p>
             <b>You will be automatically re-directed to Prolific in a few moments.</b>
         </div>`;
-        setTimeout(() => { location.href = `https://app.prolific.co/submissions/complete?cc=${completionCode}` }, 5000);
+        setTimeout(() => { location.href = `https://app.prolific.co/submissions/complete?cc=${completionCode}` }, 4000);
       }
     },
   });
@@ -40,6 +41,19 @@ const dmPsych = (function() {
 
   // define completion code for Prolific
   const completionCode = "CB1K8YPV";
+
+  // track fps
+  let frames = 0, tic = performance.now(), fpsAdjust;
+  (function getFpsAdjust() {
+      const req = window.requestAnimationFrame(getFpsAdjust);
+      frames++;
+      if(frames == 120) { 
+          fpsAdjust = (performance.now() - tic) / 2000;
+          frames = 0;
+          tic = performance.now();
+      };
+  })();
+
 
  /*
   *
@@ -70,7 +84,7 @@ const dmPsych = (function() {
     const drawFireworks = function (c, duration, maxFireworks, message) {
 
       // get start time
-      const start = Date.now();
+      const start = performance.now();
 
       // get context
       let ctx = c.getContext('2d');
@@ -87,8 +101,8 @@ const dmPsych = (function() {
         };
         for (let n = 0; n < maxSparks; n++) {
           let spark = {
-            vx: Math.random() * 5 + .5,
-            vy: Math.random() * 5 + .5,
+            vx: Math.random() * 5 * (fpsAdjust * 2) + .5,
+            vy: Math.random() * 5 * (fpsAdjust * 2) + .5,
             weight: Math.random() * .3 + .03,
             red: Math.floor(Math.random() * 2 + 1),
             green: Math.floor(Math.random() * 2 + 1),
@@ -120,7 +134,7 @@ const dmPsych = (function() {
                 let trailAge = firework.age + i;
                 let x = firework.x + spark.vx * trailAge;
                 let y = firework.y + spark.vy * trailAge + spark.weight * trailAge * spark.weight * trailAge;
-                let fade = i * 10 + firework.age * 2 + 50;
+                let fade = i * 10 + firework.age * 2 * (2 * fpsAdjust) + 50;
                 let r = Math.floor(spark.red * fade * 1);
                 let g = Math.floor(spark.green * fade * 1);
                 let b = Math.floor(spark.blue * fade * 1);
@@ -131,15 +145,15 @@ const dmPsych = (function() {
               }
             });
             firework.age++;
-            if (firework.age > 100 && Math.random() < .05) {
+            if (firework.age > (100 / (2*fpsAdjust)) && Math.random() < .05) {
               resetFirework(firework);
             }
           } else {
-            firework.y = firework.y - 10;
+            firework.y = firework.y - (10 * fpsAdjust * 2);
             for (let spark = 0; spark < 15; spark++) {
               ctx.beginPath();
               ctx.fillStyle = 'rgba(' + (3 + index) * 50 + ',' + (3 + spark) * 17 + ',0,1)';
-              ctx.rect(firework.x + Math.random() * spark - spark / 2, firework.y + spark * 4, 5, 5);
+              ctx.rect( firework.x + Math.random() * spark - spark / 2, firework.y + spark * 4, 5, 5);
               ctx.fill();
             }
             if (Math.random() < .001 || firework.y < 200) firework.phase = 'explode';
@@ -153,7 +167,7 @@ const dmPsych = (function() {
           ctx.fillText(lines[i], (c.width/2) - (lineWidths[i]/2), c.height/2 + (i*120) - 60);
         }
 
-        if (Date.now() - start < duration) { //note this also
+        if (performance.now() - start < duration) { //note this also
           myReq = window.requestAnimationFrame(explode);
         } else {
           cancelAnimationFrame(myReq);
@@ -257,7 +271,7 @@ const dmPsych = (function() {
             maxFireworks = 0;
             message = 'You missed';
           } else {
-            maxFireworks = blockType == 'practice' ? 0 : 5;
+            maxFireworks = blockName == 'practice' ? 0 : 5;
             message = 'You activated it!'
           };
         }; 
@@ -274,8 +288,8 @@ const dmPsych = (function() {
             message = 'You lost this round';
           } else {
             let winIdx = ['1', '2', '3', '4', '5'][losses];
-            maxFireworks = [16, 8, 4, 2, 1][losses];
-            message = 'You won on attempt\n#' + winIdx;
+            maxFireworks = blockName == 'practice' ? 0 : [16, 8, 4, 2, 1][losses];
+            message = 'You won on attempt:\n#' + winIdx;
             losses = 0;
           };
         };
@@ -283,12 +297,12 @@ const dmPsych = (function() {
           if (tooSlow && streak > 0) {
             let finalStreak = streak;
             streak = 0;
-            maxFireworks = finalStreak;
-            message = 'Your streak was\n' + String(finalStreak);
+            maxFireworks = blockName == 'practice' ? 0 : finalStreak;
+            message = 'Your streak was:\n' + String(finalStreak);
           } else {
             if (!tooSlow) { streak++ };
             maxFireworks = 0;
-            message = 'Current Streak\n' + String(streak);
+            message = 'Current streak:\n' + String(streak);
           };
         };
 
@@ -623,6 +637,8 @@ const dmPsych = (function() {
     game.run = function(c, trial) {
       let mouse, mouseConstraint;
 
+      let context = c.getContext('2d');
+
       // import settings
       var set = {
         ball: {
@@ -660,7 +676,7 @@ const dmPsych = (function() {
           width: set.canvas.width,
           wireframes: false,
           writeText: text
-        }
+        },
       });
 
       // construct ball
@@ -706,39 +722,38 @@ const dmPsych = (function() {
         });
         World.add(engine.world, mouseConstraint);
         render.mouse = mouse;
-      }
+      };
 
       // construct text
-      function text(canvas, options, c) {
-
+      function text(c) {
         if (intro <= 3) {
           c.font = "bold 20px Arial";
-              c.fillStyle = 'red';
+          c.fillStyle = 'red';
           c.fillText("Shoot the ball through the hole.", 75, 60);
-          }
+        };
 
         if (game.data.totalTrials == 0 && intro <= 2) {
           c.font = "16px Arial";
-              c.fillStyle = "white";
+          c.fillStyle = "white";
           c.fillText("Step 1: Click and hold the ball. Keeping your cursor in the play area,", 75, 100);
           c.fillText("pull the ball to the left to draw your sling.", 75, 120);
-          }
+        };
 
-          if (game.data.totalTrials == 0 && intro > 0 && intro <= 2) {
+        if (game.data.totalTrials == 0 && intro > 0 && intro <= 2) {
           c.font = "16px Arial";
-              c.fillStyle = "white";
+          c.fillStyle = "white";
           c.fillText("Step 2: Aim at the hole,", 75, 160);
           c.fillText("then release the ball to launch.", 75, 180);
-        }
+        };
 
-          if (game.data.totalTrials == 1 && intro > 1 && intro <= 3) {
+        if (game.data.totalTrials == 1 && intro > 1 && intro <= 3) {
           c.font = "16px Arial";
-              c.fillStyle = "white";
+          c.fillStyle = "white";
           c.fillText("Good job! Please spend the next few", 75, 100);
           c.fillText("minutes playing Hole in One. We'll let", 75, 120);
           c.fillText("you know when time is up.", 75, 140);
-        }
         };
+      };
 
       // shoot sling
       function shootSling() { 
@@ -753,7 +768,7 @@ const dmPsych = (function() {
         Events.on(engine, 'beforeUpdate', function() {
           var xDelta = Math.abs(ball.position.x-set.ball.x);
           var yDelta = Math.abs(ball.position.y-set.ball.y);
-          if(firing && xDelta<set.ball.rad && yDelta<set.ball.rad) {
+          if(firing && xDelta < (set.ball.rad*2) && yDelta < (set.ball.rad*2)) {
             sling.bodyB = null;
             sling.pointB.x = set.ball.x;
             sling.pointB.y = set.ball.y;
@@ -779,7 +794,7 @@ const dmPsych = (function() {
             inTheHole = true;
           }
         });
-      }
+      };
 
       // record data
       function recordData() {
@@ -809,7 +824,65 @@ const dmPsych = (function() {
             sling.bodyB = ball;
           };
         })
-      }
+      };
+
+      // draw spring
+      function drawSpring(x1, y1, x2, y2, windings, width, offset, col1, col2, lineWidth){
+        var x = x2 - x1;
+        var y = y2 - y1;
+        var dist = Math.sqrt(x * x + y * y);
+        
+        var nx = x / dist;
+        var ny = y / dist;
+        context.strokeStyle = col1
+        context.lineWidth = lineWidth;
+        context.lineJoin = "round";
+        context.lineCap = "round";
+        context.beginPath();
+        context.moveTo(x1,y1);
+        x1 += nx * offset;
+        y1 += ny * offset;
+        x2 -= nx * offset;
+        y2 -= ny * offset;
+        var x = x2 - x1;
+        var y = y2 - y1;
+        var step = 1 / (windings);
+        for(var i = 0; i <= 1-step; i += step){  // for each winding
+            for(var j = 0; j < 1; j += 0.05){
+                var xx = x1 + x * (i + j * step);
+                var yy = y1 + y * (i + j * step);
+                xx -= Math.sin(j * Math.PI * 2) * ny * width;
+                yy += Math.sin(j * Math.PI * 2) * nx * width;
+                context.lineTo(xx,yy);
+            }
+        }
+        context.lineTo(x2, y2);
+        context.lineTo(x2 + nx * offset, y2 + ny * offset)
+        context.stroke();
+        context.strokeStyle = col2
+        context.lineWidth = lineWidth - 4;
+        var step = 1 / (windings);
+        context.beginPath();
+        context.moveTo(x1 - nx * offset, y1 - ny * offset);
+        context.lineTo(x1, y1);
+        context.moveTo(x2, y2);
+        context.lineTo(x2 + nx * offset, y2 + ny * offset)
+        for(var i = 0; i <= 1-step; i += step){  // for each winding
+            for(var j = 0.25; j <= 0.76; j += 0.05){
+                var xx = x1 + x * (i + j * step);
+                var yy = y1 + y * (i + j * step);
+                xx -= Math.sin(j * Math.PI * 2) * ny * width;
+                yy += Math.sin(j * Math.PI * 2) * nx * width;
+                if(j === 0.25){
+                    context.moveTo(xx,yy);
+                
+                }else{
+                    context.lineTo(xx,yy);
+                }
+            }
+        }
+        context.stroke();
+      };
 
       // specify vertices for walls
       var topWallVert = Vertices.fromPath(`0 0 0 ${set.wall.height} ${set.wall.width} 0`)
@@ -828,11 +901,51 @@ const dmPsych = (function() {
       trackBall();
       recordData();
 
-      // run engine
-      Engine.run(engine);
+      (function render_func() {
+        let bodies = Composite.allBodies(engine.world)
+        let constraints = Composite.allConstraints(engine.world);
+        const req = window.requestAnimationFrame(render_func);
+        let ballPos;
+        constraints[0].stiffness = trial.tension * (fpsAdjust*2);
 
-      // run renderer
-      Render.run(render);
+        context.fillStyle = 'black';
+        context.fillRect(0, 0, c.width, c.height);
+
+        text(context);
+
+        if (constraints[0].bodyB) {
+          drawSpring(constraints[0].pointA.x, constraints[0].pointA.y, constraints[0].bodyB.position.x, constraints[0].bodyB.position.y, 4, 6, 0, "white", "#999", 3);
+        }
+       
+        // draw bodies
+        for (var i = 0; i < bodies.length; i += 1) {
+          context.beginPath();
+          context.fillStyle = 'white';
+          context.strokeStyle = 'white';
+          let body = bodies[i];
+          if(body.label != 'Circle Body') {
+            context.fillStyle = '#999';
+            context.strokeStyle = '#999';
+          };
+          var vertices = bodies[i].vertices;
+          context.moveTo(vertices[0].x, vertices[0].y);
+          for (var j = 1; j < vertices.length; j += 1) {
+              context.lineTo(vertices[j].x, vertices[j].y);
+          };
+          context.lineTo(vertices[0].x, vertices[0].y);
+          context.fill();
+          context.lineWidth = 1;
+          context.stroke();
+        };
+
+        Engine.update(engine, 16.666*fpsAdjust);
+
+        if(game.data.totalTrials == trial.total_shots) {
+          cancelAnimationFrame(req);
+        };
+
+      })();
+
     };
 
     return game;
@@ -916,13 +1029,13 @@ const dmPsych = (function() {
               `<div class='parent'>
               <p>...then, you'll see how many attempts it took you to activate the tile.</br>
               For instance, if you activate the tile on your 1st attempt, you'll get the following message:</p>
-              <div style='font-size:35px'><p>You won on your <strong>1st</strong> attempt!</p></div>
+              <p style='font-size:30pt; margin-bottom:55px'>You won on attempt:</p><p style='font-size:80pt; margin:0px'>#1</p></div> 
               </div>`,
 
               `<div class='parent'>
               <p>If you miss the tile, you'll see how many attempts you've made over the course of the current round.</br>
               For example, if you miss on your 1st attempt, you'll see the following message:</p>
-              <div style='font-size:35px'><p>Attempts this round:</p><p><span style='color:${hex}; font-size:60px'>1</span></p></div>
+              <p style='font-size:30pt; margin-bottom:55px'>Attempts this round:</p><p style='font-size:80pt; margin:0px'>1</p></div> 
               </div>`,
 
               `<div class='parent'>
@@ -958,12 +1071,12 @@ const dmPsych = (function() {
               `<div class='parent'>
               <p>...then you'll see how many times you've activated the tile in a row.</br>
               For instance, if you activate the tile 3 times in a row, you'll get the following message:</p>
-              <div style='font-size:35px'><p>Current Streak:</p><p><span style='color:${hex}; font-size:60px'>3</span></p></div>
+              <p style='font-size:30pt; margin-bottom:55px'>Current streak:</p><p style='font-size:80pt; margin:0px'>3</p></div> 
               </div>`,
 
               `<div class='parent'>
               <p>If you miss the tile, your streak will end and you'll see how long it was.
-              <div style='font-size:35px'><p>Your streak was 3</p></div>
+              <p style='font-size:30pt; margin-bottom:55px'>Your streak was:</p><p style='font-size:80pt; margin:0px'>3</p></div> 
               </div>`,
 
               `<div class='parent'>
@@ -1049,15 +1162,15 @@ const dmPsych = (function() {
 
               `<div class='parent'>
               <p>Third, in the full version of the Tile Game you'll be rewarded with a<br>
-              firewords display each time you activate the tile.</p>
+              fireworks display each time you activate the tile.</p>
               <p>The amount of fireworks you get depends on the number of attempts you take the activate the tile.<br>
-              Specifically, the fewer attempts you take to activate the tile, the more fireworks you'll get!</p>
+              The fewer attempts you take to activate the tile, the more fireworks you'll get!</p>
               </div>`];
       };
 
       if (gameType == 'strk') {
           html = [`<div class='parent'>
-              <p>The full version of the Tile Game differs from the practice version in two ways.</p>
+              <p>The full version of the Tile Game differs from the practice version in three ways.</p>
               </div>`,
 
               `<div class='parent'>
@@ -1072,9 +1185,9 @@ const dmPsych = (function() {
 
               `<div class='parent'>
               <p>Third, in the full version of the Tile Game you'll be rewarded with a<br>
-              firewords display each time you end a streak.</p>
+              fireworks display each time you end a streak.</p>
               <p>The amount of fireworks you get depends on the length of your streak.<br>
-              Specifically, the longer your streak, the more fireworks you'll get when it ends!</p>
+              The longer your streak, the more fireworks you'll get when it ends!</p>
               </div>`];
       };
 
