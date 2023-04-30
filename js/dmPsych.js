@@ -1040,7 +1040,7 @@ const dmPsych = (function() {
 
               `<div class='parent'>
               <p>To get a feel for the Tile Game, you'll complete a practice round.<br>
-              Once you proceed, practice round will start, so get ready to press your SPACEBAR.</p>
+              Once you proceed, the practice round will start, so get ready to press your SPACEBAR.</p>
               <p>Continue to begin practicing.</p>
               </div>`];        
       };
@@ -1081,7 +1081,7 @@ const dmPsych = (function() {
 
               `<div class='parent'>
               <p>To get a feel for the Tile Game, you'll complete a practice round.<br>
-              Once you proceed, practice round will start, so get ready to press your SPACEBAR.</p>
+              Once you proceed, the practice round will start, so get ready to press your SPACEBAR.</p>
               <p>Continue to begin practicing.</p>
               </div>`];
       };
