@@ -906,7 +906,7 @@ const dmPsych = (function() {
         let constraints = Composite.allConstraints(engine.world);
         const req = window.requestAnimationFrame(render_func);
         let ballPos;
-        constraints[0].stiffness = trial.tension * (fpsAdjust*2);
+        constraints[0].stiffness = trial.tension * fpsAdjust;
 
         context.fillStyle = 'black';
         context.fillRect(0, 0, c.width, c.height);
