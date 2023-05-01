@@ -178,7 +178,7 @@ const dmPsych = (function() {
 
     let losses = 0, round = 1, streak = 0, trialNumber = 0, tooSlow = null, tooFast = null;
 
-    const latency = dmPsych.makeRT(nTrials, pM);
+    const latency = dmPsych.makeRT(nTrials, pM, roundLength);
 
     const intro = {
       type: jsPsychHtmlKeyboardResponse,
@@ -191,6 +191,9 @@ const dmPsych = (function() {
             return `<div style='font-size:35px'><p>Get ready for Round 1!</p></div>`;
         };
         if (gameType == 'strk') {
+            return `<div style='font-size:35px'><p>Get ready for the first tile!</p></div>`;
+        };
+        if (gameType == 'bern') {
             return `<div style='font-size:35px'><p>Get ready for the first tile!</p></div>`;
         };
       },
@@ -273,12 +276,14 @@ const dmPsych = (function() {
         if (gameType == 'bern') {
           if (tooSlow) {
             maxFireworks = 0;
-            fontSize = [60];
-            message = 'You missed it.';
+            fontSize = [50, 30];
+            message = 'You lost Round '+round+'\nRound '+(round + 1)+' will now begin';
+            round++;          
           } else {
             maxFireworks = blockName == 'practice' ? 0 : 5;
-            fontSize = [60];
-            message = 'You activated it!'
+            fontSize = [50, 30];
+            message = 'You won Round '+round+'\nRound '+(round + 1)+' will now begin';
+            round++;          
           };
         }; 
         if (gameType == '1inN') {
@@ -287,7 +292,7 @@ const dmPsych = (function() {
             maxFireworks = 0;
             fontSize = [30];
             message = 'Continuing Round '+round+'...';
-          } else if (tooSlow && losses == 4) {
+          } else if (tooSlow && losses == roundLength - 1) {
             losses = 0;
             maxFireworks = 0;
             fontSize = [50, 30];
@@ -308,7 +313,7 @@ const dmPsych = (function() {
             maxFireworks = 0;
             fontSize = [30, 60];
             message = 'Attempts this round:\n' + String(losses);
-          } else if (tooSlow && losses == 4) {
+          } else if (tooSlow && losses == roundLength - 1) {
             losses = 0;
             maxFireworks = 0;
             fontSize = [50, 30];
@@ -361,11 +366,11 @@ const dmPsych = (function() {
   };
 
   // make n-dimensional array of RTs given p(hit) = p
-  obj.makeRT = function(n, p) {
+  obj.makeRT = function(n, p, roundLength) {
 
     const nDraws = Math.floor(n * p);  // set number of draws from geometric distribution
     const maxWinStrk = Math.ceil((nDraws*1.5)/(n-nDraws));  // set length of longest win streak at the trial level
-    const maxLossStrk = Math.ceil(((n-nDraws)*1.5)/nDraws);  // set length of longest losing streak at chunk level
+    const maxLossStrk = Math.ceil(((n-nDraws)*1.5)/(nDraws*roundLength));  // set length of longest losing streak at chunk level
     let geoms = [];  // random draws from geometric distribution
     let rt = [];  // array of RTs
     let nTrials = 0;  // count total numeber of trials
@@ -397,7 +402,7 @@ const dmPsych = (function() {
       }
 
       // get longest losing streak at the chunk level
-      let nLoss = geoms.map(x => Math.floor(x/5));  // number of chunk-level losses in a row per geom draw
+      let nLoss = geoms.map(x => Math.floor(x/roundLength));  // number of chunk-level losses in a row per geom draw
       if (Math.max(...nLoss) > maxLossStrk) { lossStrkPass = false };
 
       // get longest winning streak at the trial level
@@ -1030,7 +1035,7 @@ const dmPsych = (function() {
       return html;
   };
 
-  obj.prePractice_tileGame = function({gameType, val, span, color, hex}) {
+  obj.prePractice_tileGame = function({gameType, val, span, color, hex, roundLength}) {
 
       let html;
 
@@ -1040,7 +1045,7 @@ const dmPsych = (function() {
               </div>`,
 
               `<div class='parent'>
-              <p>In each round, you'll have up to five attempts to activate the grey tile below.</br>
+              <p>In each round, you'll have up to ${roundLength} attempts to activate the grey tile below.</br>
               Your goal is to activate the tile in as few attempts as possible.</p>
               <div class='box' style='background-color:gray'></div>
               </div>`,
@@ -1069,8 +1074,8 @@ const dmPsych = (function() {
               </div>`,
 
               `<div class='parent'>
-              <p>To get a feel for the Tile Game, you'll complete a practice round.<br>
-              Once you proceed, the practice round will start, so get ready to press your SPACEBAR.</p>
+              <p>To get a feel for the Tile Game, you'll complete a practice session.<br>
+              Once you proceed, the practice session will start, so get ready to press your SPACEBAR.</p>
               <p>Continue to begin practicing.</p>
               </div>`];        
       };
@@ -1110,8 +1115,8 @@ const dmPsych = (function() {
               </div>`,
 
               `<div class='parent'>
-              <p>To get a feel for the Tile Game, you'll complete a practice round.<br>
-              Once you proceed, the practice round will start, so get ready to press your SPACEBAR.</p>
+              <p>To get a feel for the Tile Game, you'll complete a practice session.<br>
+              Once you proceed, the practice session will start, so get ready to press your SPACEBAR.</p>
               <p>Continue to begin practicing.</p>
               </div>`];
       };
@@ -1122,8 +1127,8 @@ const dmPsych = (function() {
               </div>`,
 
               `<div class='parent'>
-              <p>In each round, you'll have five chances to activate the grey tile below.</br>
-              Your goal is to win each round by activating the tile before your five chances are up.</p>
+              <p>In each round, you'll have ${roundLength} chances to activate the grey tile below.</br>
+              Your goal is to win each round by activating the tile before your ${roundLength} chances are up.</p>
               <div class='box' style='background-color:gray'></div>
               </div>`,
 
@@ -1134,7 +1139,7 @@ const dmPsych = (function() {
               </div>`,
 
               `<div class='parent'>
-              <p>If you activate the tile before your five chances are up, it will turn <span class='${span}'>${color}</span>...</p>
+              <p>If you activate the tile before your ${roundLength} chances are up, it will turn <span class='${span}'>${color}</span>...</p>
               <div class='box' style='background-color:${hex}'></div>
               </div>`,
 
@@ -1151,54 +1156,52 @@ const dmPsych = (function() {
               </div>`,
 
               `<div class='parent'>
-              <p>To get a feel for the Tile Game, you'll complete a practice round.<br>
-              Once you proceed, the practice round will start, so get ready to press your SPACEBAR.</p>
+              <p>To get a feel for the Tile Game, you'll complete a practice session.<br>
+              Once you proceed, the practice session will start, so get ready to press your SPACEBAR.</p>
               <p>Continue to begin practicing.</p>
               </div>`];
-      }
+      };
 
       if (gameType == 'bern') {
           html = [`<div class='parent'>
-              <p>To earn money in the Tile Game, you must achieve wins.<br>
-              The more wins you achieve, the more money you'll earn.</p>
+              <p>The Tile Game is played in multiple rounds.</p>
               </div>`,
 
               `<div class='parent'>
-              <p>To achieve wins, you'll try to "activate" tiles like this one.<br>
-              Activating a tile results in a win.</p>
+              <p>In each round, you'll have one chance to activate the grey tile below.</br>
+              Your goal is to win each round by activating the tile.</p>
               <div class='box' style='background-color:gray'></div>
               </div>`,
 
               `<div class='parent'>
-              <p>Wins are worth money. The more tiles you activate, the more money you'll earn.<br>
-              Specifically, ${val} cent${plural} will be added to your bonus fund for each tile you activate.</p>               
+              <p>The tile will appear on your screen, then disappear very quickly. To activate it, you must press your SPACEBAR 
+              before it disappears; whenever you see the tile, you should press your SPACEBAR as fast as possible.</p>
               <div class='box' style='background-color:gray'></div>
               </div>`,
 
               `<div class='parent'>
-              <p>Tiles will appear on your screen, then disappear very quickly. To activate a tile, you must press your SPACE BAR 
-              before it disappears; whenever you see a tile, you should press your SPACE BAR as fast as possible.</p>
-              <div class='box' style='background-color:gray'></div>
-              </div>`,
-
-              `<div class='parent'>
-              <p>In the Tile Game, tiles turn <span class='${span}'>${color}</span> 
-              when activated.</p>
+              <p>If you activate the tile, it will turn <span class='${span}'>${color}</span>...</p>
               <div class='box' style='background-color:${hex}'></div>
               </div>`,
 
               `<div class='parent'>
-              <p>If you activate a tile, you'll see that ${val} cent${plural} ${wasWere} added to your bonus fund.<br>
-              The next tile will appear immediately after.</p>
-              <div style='font-size:35px'><p>You activated it!</p><p>+${val} cent${plural}</p><p><br></p><p>(Get ready for the next tile!)</p></div>
+              <p>...then, you'll see a message indicating that you won the round.<br>
+              For instance, if you were to win Round 5, you'd see the following message:</p>
+              <p style='font-size:50pt; margin-bottom:70px'>You won Round 5</p><p style='font-size:30pt; margin:0px'>Round 6 will now begin</p>
               </div>`,
 
               `<div class='parent'>
-              <p>If you miss a tile, you'll see that no money was added to your bonus fund.<br>
-              The next tile will appear immediately after.</p>
-              <div style='font-size:35px'><p>You missed</p><p>+0 cents</p><p><br></p><p>(Get ready for the next tile!)</p></div>
+              <p>If you fail to activate the tile, you'll see a message indicating that you lost the round.<br>
+              For instance, if you were to lose Round 5, you'd see the following message:</p>
+              <p style='font-size:50pt; margin-bottom:70px'>You lost Round 5</p><p style='font-size:30pt; margin:0px'>Round 6 will now begin</p>
+              </div>`,
+
+              `<div class='parent'>
+              <p>To get a feel for the Tile Game, you'll complete a practice session.<br>
+              Once you proceed, the practice session will start, so get ready to press your SPACEBAR.</p>
+              <p>Continue to begin practicing.</p>
               </div>`];
-      }
+      };
 
       return html;
   };
@@ -1210,77 +1213,101 @@ const dmPsych = (function() {
       return html;
   };
 
-  obj.postPractice_tileGame = function({gameType, pM, val, plural, nTrials}) {
+  obj.postPractice_tileGame = function({gameType, pM, pM_practice, val, plural, nTrials, roundLength}) {
 
       let html;
 
-      let easierOrHarder = pM > .5 ? 'easier' : 'more difficult';
+      let easierOrHarder = pM > pM_practice ? 'easier' : 'more difficult';
 
       if (gameType == 'invStrk') {
-          html = [`<div class='parent'>
-              <p>The full version of the Tile Game differs from the practice version in three ways.</p>
-              </div>`,
+        html = [`<div class='parent'>
+            <p>The full version of the Tile Game differs from the practice version in three ways.</p>
+            </div>`,
 
-              `<div class='parent'>
-              <p>First, the full version of the Tile Game will be ${easierOrHarder} than the practice version.<br>
-              Specifically, most players activate the tile <strong>${pM*100}%</strong> of the time.</p>
-              </div>`,
+            `<div class='parent'>
+            <p>First, the full version of the Tile Game will be ${easierOrHarder} than the practice version.<br>
+            Specifically, most players activate the tile <strong>${pM*100}%</strong> of the time.</p>
+            </div>`,
 
-              `<div class='parent'>
-              <p>Second, the full version of the Tile Game will be longer than the practice version.<br>
-              Specifically, you will have ${nTrials} chances to activate the tile.</p>
-              </div>`,              
+            `<div class='parent'>
+            <p>Second, the full version of the Tile Game will be longer than the practice version.<br>
+            Specifically, the tile will appear ${nTrials} times.</p>
+            </div>`,              
 
-              `<div class='parent'>
-              <p>Third, in the full version of the Tile Game you'll be rewarded with a<br>
-              fireworks display each time you activate the tile.</p>
-              <p>The amount of fireworks you get depends on the number of attempts you take the activate the tile.<br>
-              The fewer attempts you take to activate the tile, the more fireworks you'll get!</p>
-              </div>`];
+            `<div class='parent'>
+            <p>Third, in the full version of the Tile Game you'll be rewarded with a<br>
+            fireworks display each time you activate the tile.</p>
+            <p>The amount of fireworks you get depends on the number of attempts you take the activate the tile.<br>
+            The fewer attempts you take to activate the tile, the more fireworks you'll get!</p>
+            </div>`];
       };
 
       if (gameType == 'strk') {
-          html = [`<div class='parent'>
-              <p>The full version of the Tile Game differs from the practice version in three ways.</p>
-              </div>`,
+        html = [`<div class='parent'>
+            <p>The full version of the Tile Game differs from the practice version in three ways.</p>
+            </div>`,
 
-              `<div class='parent'>
-              <p>First, the full version of the Tile Game will be ${easierOrHarder} than the practice version.<br>
-              Specifically, most players activate the tile <strong>${pM*100}%</strong> of the time.</p>
-              </div>`,
+            `<div class='parent'>
+            <p>First, the full version of the Tile Game will be ${easierOrHarder} than the practice version.<br>
+            Specifically, most players activate the tile <strong>${pM*100}%</strong> of the time.</p>
+            </div>`,
 
-              `<div class='parent'>
-              <p>Second, the full version of the Tile Game will be longer than the practice version.<br>
-              Specifically, you will have ${nTrials} chances to activate the tile.</p>
-              </div>`,     
+            `<div class='parent'>
+            <p>Second, the full version of the Tile Game will be longer than the practice version.<br>
+            Specifically, the tile will appear ${nTrials} times.</p>
+            </div>`,     
 
-              `<div class='parent'>
-              <p>Third, in the full version of the Tile Game you'll be rewarded with a<br>
-              fireworks display each time you end a streak.</p>
-              <p>The amount of fireworks you get depends on the length of your streak.<br>
-              The longer your streak, the more fireworks you'll get when it ends!</p>
-              </div>`];
+            `<div class='parent'>
+            <p>Third, in the full version of the Tile Game you'll be rewarded with a<br>
+            fireworks display each time you end a streak.</p>
+            <p>The amount of fireworks you get depends on the length of your streak.<br>
+            The longer your streak, the more fireworks you'll get when it ends!</p>
+            </div>`];
       };
 
       if (gameType == '1inN') {
-          html = [`<div class='parent'>
-              <p>The full version of the Tile Game differs from the practice version in three ways.</p>
-              </div>`,
 
-              `<div class='parent'>
-              <p>First, the full version of the Tile Game will be ${easierOrHarder} than the practice version.<br>
-              Specifically, most players activate the tile <strong>${pM*100}%</strong> of the time.</p>
-              </div>`,
+        const pWin = Math.floor(100 * (1 - (1 - pM)**roundLength));
 
-              `<div class='parent'>
-              <p>Second, the full version of the Tile Game will be longer than the practice version.<br>
-              Specifically, you will have ${nTrials} chances to activate the tile.</p>
-              </div>`,     
+        html = [`<div class='parent'>
+            <p>The full version of the Tile Game differs from the practice version in three ways.</p>
+            </div>`,
 
-              `<div class='parent'>
-              <p>Third, in the full version of the Tile Game you'll be rewarded with a<br>
-              fireworks display each time you win a round!</p>
-              </div>`];
+            `<div class='parent'>
+            <p>First, the full version of the Tile Game will be ${easierOrHarder} than the practice version.<br>
+            Specifically, most players win <strong>${pWin}%</strong> of their rounds.</p>
+            </div>`,
+
+            `<div class='parent'>
+            <p>Second, the full version of the Tile Game will be longer than the practice version.<br>
+            Specifically, the tile will appear ${nTrials} times.</p>
+            </div>`,     
+
+            `<div class='parent'>
+            <p>Third, in the full version of the Tile Game you'll be rewarded with a<br>
+            fireworks display each time you win a round!</p>
+            </div>`];
+      };
+
+      if (gameType == 'bern') {
+        html = [`<div class='parent'>
+            <p>The full version of the Tile Game differs from the practice version in three ways.</p>
+            </div>`,
+
+            `<div class='parent'>
+            <p>First, the full version of the Tile Game will be ${easierOrHarder} than the practice version.<br>
+            Specifically, most players win <strong>${pM*100}%</strong> of their rounds.</p>
+            </div>`,
+
+            `<div class='parent'>
+            <p>Second, the full version of the Tile Game will be longer than the practice version.<br>
+            Specifically, the tile will appear ${nTrials} times.</p>
+            </div>`,     
+
+            `<div class='parent'>
+            <p>Third, in the full version of the Tile Game you'll be rewarded with a<br>
+            fireworks display each time you win a round!</p>
+            </div>`];
       };
 
       return html;

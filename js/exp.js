@@ -4,8 +4,9 @@ var exp = (function() {
 
     // randomly assign to conditions and save settings
     const settings = {
-        pM: Array(.87, .13)[Math.floor(Math.random()*2)],
-        gameType: ['1inN', '1inN'][Math.floor(Math.random()*2)],
+        pM: Array(.5, .13)[Math.floor(Math.random()*2)],
+        pM_practice: .32,
+        gameType: ['1inN', 'bern'][Math.floor(Math.random()*2)],
         val: 6,
         nTrials: 62,
         basePay: 10,
@@ -37,40 +38,69 @@ var exp = (function() {
     */
 
     // constructor function for presenting post-practice tile game information and assessing comprehension
-    function MakePostPractice_tileGame({gameType, pM, val, plural, nTrials}) {
+    function MakePostPractice_tileGame({gameType, pM, pM_practice, val, plural, nTrials, roundLength}) {
 
         const info = {
             type: jsPsychInstructions,
-            pages: dmPsych.postPractice_tileGame({gameType, pM, val, plural, nTrials}),
+            pages: dmPsych.postPractice_tileGame({gameType, pM, pM_practice, val, plural, nTrials, roundLength}),
             show_clickable_nav: true,
         };
 
-        let q1, o1, a1, a2, a3, a4, q2;
+        let q2, q3, o2, a1, a2, a3, a4;
 
         if (gameType == 'invStrk') {
-            q1 = 'The fewer attempts you take to activate the tile...';
-            o1 = ['...the more fireworks you will receive.', '...the sooner the game will end.', '...the more points you will accumulate.'];
-            a1 = '...the more fireworks you will receive.';
-            a2 = 'Activate the tile in as few attempts as possible';
+            // attention check #1
+            a1 = 'Activate the tile in as few attempts as possible';
+            // attention check #2
+            q2 = 'The fewer attempts you take to activate the tile...';
+            o2 = ['the more fireworks you will receive.', 'the sooner the game will end.', 'the more points you will accumulate.'];
+            a2 = 'the more fireworks you will receive.';
+            // attention check #3
+            q3 = 'Most players activate the tile what percentage of the time?';
             a3 = String(pM*100) + '%';
+            // attention check #4
             a4 = String(nTrials);
         };
 
         if (gameType == 'strk') {
-            q1 = 'The longer your streak...';            
-            o1 = ['...the more fireworks you will receive.', '...the sooner the game will end.', '...the more points you will accumulate.'];
-            a1 = '...the more fireworks you will receive.';
-            a2 = 'Activate the tile as many times in a row as possible';
+            // attention check #1
+            a1 = 'Activate the tile as many times in a row as possible';
+            // attention check #2
+            q2 = 'The longer your streak...';
+            o2 = ['the more fireworks you will receive.', 'the sooner the game will end.', 'the more points you will accumulate.'];
+            a2 = 'the more fireworks you will receive.';
+            // attention check #3
+            q3 = 'Most players activate the tile what percentage of the time?';
             a3 = String(pM*100) + '%';
+            // attention check #4
             a4 = String(nTrials);
         };
 
         if (gameType == '1inN') {
-            q1 = 'Each time you win a round...';     
-            o1 = ['...you will get a fireworks display.', '...the game will end.', '...you will receive points.'];
-            a1 = '...you will get a fireworks display.';
-            a2 = 'Activate the tile before the end of each round';
+            // attention check #1
+            a1 = 'Win each round';
+            // attention check #2
+            q2 = 'Each time you win a round...';
+            o2 = ['you will get a fireworks display.', 'the game will end.', 'you will receive points.'];
+            a2 = 'you will get a fireworks display.';
+            // attention check #3
+            q3 = 'Most players win what percentage of their rounds?';
+            a3 = String( Math.floor(100 * (1 - (1 - pM)**roundLength)) ) + '%';
+            // attention check #4
+            a4 = String(nTrials);
+        };
+
+        if (gameType == 'bern') {
+            // attention check #1
+            a1 = 'Win each round';
+            // attention check #2
+            q2 = 'Each time you win a round...';
+            o2 = ['you will get a fireworks display.', 'the game will end.', 'you will receive points.'];
+            a2 = 'you will get a fireworks display.';
+            // attention check #3
+            q3 = 'Most players win what percentage of their rounds?';
             a3 = String(pM*100) + '%';
+            // attention check #4
             a4 = String(nTrials);
         };
 
@@ -79,25 +109,25 @@ var exp = (function() {
             preamble: `<div style="font-size:16px"><p>To make sure you understand the full version of <strong>The Tile Game</strong>, please answer the following questions:</p></div>`,
             questions: [
                 {
-                  prompt: q1, 
-                  name: 'fireworksChk', 
-                  options: o1, 
-                  required: true
-                },
-                {
                   prompt: 'What is the goal of the Tile Game? (Multiple answers are possible, but one is best.)', 
                   name: 'goalChk', 
-                  options: ['Activate the tile in as few attempts as possible', 'Activate the tile as many times in a row as possible', 'Activate the tile before the end of each round', 'Activate the tile each and every time it appears on the screen'], 
+                  options: ['Activate the tile in as few attempts as possible', 'Activate the tile as many times in a row as possible', 'Win each round'], 
                   required: true
                 },
                 {
-                  prompt: 'For most players, what is the probability of activating the tile?', 
+                  prompt: q2, 
+                  name: 'fireworksChk', 
+                  options: o2, 
+                  required: true
+                },
+                {
+                  prompt: q3, 
                   name: 'probChk', 
-                  options: ['0%', '13%', '50%', '87%', '100%'], 
+                  options: ['0%', '13%', '50%', '87%', '96%'], 
                   required: true
                 },
                 {
-                  prompt: 'How many opportunities will you have to activate the tile?', 
+                  prompt: 'How many times will the tile appear?', 
                   name: 'nChk', 
                   options: ['22', '42', '62', '82', '102'], 
                   required: true
@@ -119,7 +149,6 @@ var exp = (function() {
         const conditionalNode = {
             timeline: [errorMessage],
             conditional_function: () => {
-                console.log(jsPsych.data.get().last(1).select('totalErrors').sum());
                 const fail = jsPsych.data.get().last(1).select('totalErrors').sum() > 0 ? true : false;
                 return fail;
             }
@@ -127,7 +156,6 @@ var exp = (function() {
 
         this.timeline = [info, compChk, conditionalNode];
         this.loop_function = () => {
-            console.log(jsPsych.data.get().last(2).select('totalErrors').sum());
             const fail = jsPsych.data.get().last(2).select('totalErrors').sum() > 0 ? true : false;
             return fail;
         };
@@ -263,7 +291,7 @@ var exp = (function() {
         data: {block: 'holeInOne'}
     };
 
-    p.practice2 = new dmPsych.MakeTileGame(settings, settings.gameType, 10, .5, 'practice');
+    p.practice2 = new dmPsych.MakeTileGame(settings, settings.gameType, 10, settings.pM_practice, 'practice');
 
     p.task2 = new dmPsych.MakeTileGame(settings, settings.gameType, settings.nTrials, settings.pM, 'tileGame');
 
