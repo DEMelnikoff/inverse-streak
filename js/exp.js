@@ -5,7 +5,7 @@ var exp = (function() {
     // randomly assign to conditions and save settings
     const settings = {
         pM: Array(.87, .13)[Math.floor(Math.random()*2)],
-        gameType: ['strk', 'invStrk'][Math.floor(Math.random()*2)],
+        gameType: ['1inN', '1inN'][Math.floor(Math.random()*2)],
         val: 6,
         nTrials: 62,
         basePay: 10,
@@ -45,38 +45,49 @@ var exp = (function() {
             show_clickable_nav: true,
         };
 
-        let a1, a2, a3, a4, q2;
+        let q1, o1, a1, a2, a3, a4, q2;
 
         if (gameType == 'invStrk') {
-            a1 = 'Activate the tile in as few attempts as possible'
-            a2 = '...the more fireworks you will receive.';
+            q1 = 'The fewer attempts you take to activate the tile...';
+            o1 = ['...the more fireworks you will receive.', '...the sooner the game will end.', '...the more points you will accumulate.'];
+            a1 = '...the more fireworks you will receive.';
+            a2 = 'Activate the tile in as few attempts as possible';
             a3 = String(pM*100) + '%';
             a4 = String(nTrials);
-            q2 = 'The fewer attempts you take to activate the tile...';
-        }
+        };
 
         if (gameType == 'strk') {
-            a1 = 'Activate the tile as many times in a row as possible'
-            a2 = '...the more fireworks you will receive.';
+            q1 = 'The longer your streak...';            
+            o1 = ['...the more fireworks you will receive.', '...the sooner the game will end.', '...the more points you will accumulate.'];
+            a1 = '...the more fireworks you will receive.';
+            a2 = 'Activate the tile as many times in a row as possible';
             a3 = String(pM*100) + '%';
             a4 = String(nTrials);
-            q2 = 'The longer your streak...';            
-        }
+        };
+
+        if (gameType == '1inN') {
+            q1 = 'Each time you win a round...';     
+            o1 = ['...you will get a fireworks display.', '...the game will end.', '...you will receive points.'];
+            a1 = '...you will get a fireworks display.';
+            a2 = 'Activate the tile before the end of each round';
+            a3 = String(pM*100) + '%';
+            a4 = String(nTrials);
+        };
 
         const compChk = {
             type: jsPsychSurveyMultiChoice,
-            preamble: `<div style="font-size:16px"><p>To make sure you understand the full version of <strong>The Tile Game</strong>, please answer the following question:</p></div>`,
+            preamble: `<div style="font-size:16px"><p>To make sure you understand the full version of <strong>The Tile Game</strong>, please answer the following questions:</p></div>`,
             questions: [
                 {
-                  prompt: 'What is the goal of the Tile Game?', 
-                  name: 'goalChk', 
-                  options: ['Activate the tile in as few attempts as possible', 'Activate the tile as many times in a row as possible', 'Activate the tile as many times in total as possible'], 
+                  prompt: q1, 
+                  name: 'fireworksChk', 
+                  options: o1, 
                   required: true
                 },
                 {
-                  prompt: q2, 
-                  name: 'fireworksChk', 
-                  options: ['...the more fireworks you will receive.', '...the sooner the game will end.', '...the more points you will accumulate.'], 
+                  prompt: 'What is the goal of the Tile Game? (Multiple answers are possible, but one is best.)', 
+                  name: 'goalChk', 
+                  options: ['Activate the tile in as few attempts as possible', 'Activate the tile as many times in a row as possible', 'Activate the tile before the end of each round', 'Activate the tile each and every time it appears on the screen'], 
                   required: true
                 },
                 {

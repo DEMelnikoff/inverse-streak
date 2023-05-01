@@ -81,7 +81,7 @@ const dmPsych = (function() {
   // create tile game
   obj.MakeTileGame = function({val, plural, hex, tileHit, tileMiss, roundLength}, gameType, nTrials, pM, blockName) {
 
-    const drawFireworks = function (c, duration, maxFireworks, message) {
+    const drawFireworks = function (c, duration, maxFireworks, message, fontSize) {
 
       // get start time
       const start = performance.now();
@@ -162,7 +162,7 @@ const dmPsych = (function() {
 
         for (let i = 0; i<lines.length; i++) {
           ctx.fillStyle = 'black';
-          ctx.font = ["normal 30pt Arial", "normal 80pt Arial"][i]
+          ctx.font = ["normal "+fontSize[0]+"pt Arial", "normal "+fontSize[1]+"pt Arial"][i]
           let lineWidths = lines.map(x => ctx.measureText(x).width);
           ctx.fillText(lines[i], (c.width/2) - (lineWidths[i]/2), c.height/2 + (i*120) - 60);
         }
@@ -176,7 +176,7 @@ const dmPsych = (function() {
 
     };
 
-    let losses = 0, streak = 0, trialNumber = 0, tooSlow = null, tooFast = null;
+    let losses = 0, round = 1, streak = 0, trialNumber = 0, tooSlow = null, tooFast = null;
 
     const latency = dmPsych.makeRT(nTrials, pM);
 
@@ -186,7 +186,11 @@ const dmPsych = (function() {
       stimulus: function() {
         if (gameType == 'invStrk') {
             return `<div style='font-size:35px'><p>Get ready for the first round!</p></div>`;
-        } else {
+        };
+        if (gameType == '1inN') {
+            return `<div style='font-size:35px'><p>Get ready for Round 1!</p></div>`;
+        };
+        if (gameType == 'strk') {
             return `<div style='font-size:35px'><p>Get ready for the first tile!</p></div>`;
         };
       },
@@ -265,32 +269,56 @@ const dmPsych = (function() {
       data: {trial_type: `feedback`, block: blockName},
       canvas_size: [700, 900],
       stimulus: function(c) { 
-        let maxFireworks, message;
+        let maxFireworks, message, fontSize;
         if (gameType == 'bern') {
           if (tooSlow) {
             maxFireworks = 0;
-            message = 'You missed';
+            fontSize = [60];
+            message = 'You missed it.';
           } else {
             maxFireworks = blockName == 'practice' ? 0 : 5;
+            fontSize = [60];
             message = 'You activated it!'
           };
         }; 
+        if (gameType == '1inN') {
+          if (tooSlow && losses < 4) {
+            losses++;
+            maxFireworks = 0;
+            fontSize = [30];
+            message = 'Continuing Round '+round+'...';
+          } else if (tooSlow && losses == 4) {
+            losses = 0;
+            maxFireworks = 0;
+            fontSize = [50, 30];
+            message = 'You lost Round '+round+'\nRound '+(round + 1)+' will now begin';
+            round++;
+          } else {
+            losses = 0;
+            maxFireworks = blockName == 'practice' ? 0 : 8;
+            fontSize = [50, 30];
+            message = 'You won Round '+round+'\nRound '+(round + 1)+' will now begin';
+            round++;
+          };
+        };
         if (gameType == 'invStrk') {
           if (tooSlow && losses < 4) {
             losses++;
             let triesLeft = roundLength - losses;
-            let tryText = triesLeft == 1 ? "Chance" : "Chances";
             maxFireworks = 0;
+            fontSize = [30, 60];
             message = 'Attempts this round:\n' + String(losses);
           } else if (tooSlow && losses == 4) {
             losses = 0;
             maxFireworks = 0;
-            message = 'You lost this round';
+            fontSize = [50, 30];
+            message = 'You lost this round\nGet ready for the next round';
           } else {
             let winIdx = ['1', '2', '3', '4', '5'][losses];
             maxFireworks = blockName == 'practice' ? 0 : [16, 8, 4, 2, 1][losses];
-            message = 'You won on attempt:\n#' + winIdx;
             losses = 0;
+            fontSize = [30, 60];
+            message = 'You won on attempt:\n#' + winIdx;
           };
         };
         if (gameType == 'strk') {
@@ -298,15 +326,17 @@ const dmPsych = (function() {
             let finalStreak = streak;
             streak = 0;
             maxFireworks = blockName == 'practice' ? 0 : finalStreak;
+            fontSize = [30, 60];
             message = 'Your streak was:\n' + String(finalStreak);
           } else {
             if (!tooSlow) { streak++ };
             maxFireworks = 0;
+            fontSize = [30, 60];
             message = 'Current streak:\n' + String(streak);
           };
         };
 
-        return drawFireworks(c, 3000, maxFireworks, message)
+        return drawFireworks(c, 3000, maxFireworks, message, fontSize)
       },
       choices: "NO_KEYS",
       trial_duration: 3000,
@@ -1028,14 +1058,14 @@ const dmPsych = (function() {
 
               `<div class='parent'>
               <p>...then, you'll see how many attempts it took you to activate the tile.</br>
-              For instance, if you activate the tile on your 1st attempt, you'll get the following message:</p>
-              <p style='font-size:30pt; margin-bottom:55px'>You won on attempt:</p><p style='font-size:80pt; margin:0px'>#1</p></div> 
+              For instance, if you were to activate the tile on your 1st attempt, you'd get the following message:</p>
+              <p style='font-size:30pt; margin-bottom:55px'>You won on attempt:</p><p style='font-size:60pt; margin:0px'>#1</p>
               </div>`,
 
               `<div class='parent'>
               <p>If you miss the tile, you'll see how many attempts you've made over the course of the current round.</br>
-              For example, if you miss on your 1st attempt, you'll see the following message:</p>
-              <p style='font-size:30pt; margin-bottom:55px'>Attempts this round:</p><p style='font-size:80pt; margin:0px'>1</p></div> 
+              For example, if you were miss on your 1st attempt, you'd see the following message:</p>
+              <p style='font-size:30pt; margin-bottom:55px'>Attempts this round:</p><p style='font-size:60pt; margin:0px'>1</p>
               </div>`,
 
               `<div class='parent'>
@@ -1071,12 +1101,12 @@ const dmPsych = (function() {
               `<div class='parent'>
               <p>...then you'll see how many times you've activated the tile in a row.</br>
               For instance, if you activate the tile 3 times in a row, you'll get the following message:</p>
-              <p style='font-size:30pt; margin-bottom:55px'>Current streak:</p><p style='font-size:80pt; margin:0px'>3</p></div> 
+              <p style='font-size:30pt; margin-bottom:55px'>Current streak:</p><p style='font-size:60pt; margin:0px'>3</p>
               </div>`,
 
               `<div class='parent'>
               <p>If you miss the tile, your streak will end and you'll see how long it was.
-              <p style='font-size:30pt; margin-bottom:55px'>Your streak was:</p><p style='font-size:80pt; margin:0px'>3</p></div> 
+              <p style='font-size:30pt; margin-bottom:55px'>Your streak was:</p><p style='font-size:60pt; margin:0px'>3</p>
               </div>`,
 
               `<div class='parent'>
@@ -1085,6 +1115,47 @@ const dmPsych = (function() {
               <p>Continue to begin practicing.</p>
               </div>`];
       };
+
+      if (gameType == '1inN') {
+          html = [`<div class='parent'>
+              <p>The Tile Game is played in multiple rounds.</p>
+              </div>`,
+
+              `<div class='parent'>
+              <p>In each round, you'll have five chances to activate the grey tile below.</br>
+              Your goal is to win each round by activating the tile before your five chances are up.</p>
+              <div class='box' style='background-color:gray'></div>
+              </div>`,
+
+              `<div class='parent'>
+              <p>The tile will appear on your screen, then disappear very quickly. To activate it, you must press your SPACEBAR 
+              before it disappears; whenever you see the tile, you should press your SPACEBAR as fast as possible.</p>
+              <div class='box' style='background-color:gray'></div>
+              </div>`,
+
+              `<div class='parent'>
+              <p>If you activate the tile before your five chances are up, it will turn <span class='${span}'>${color}</span>...</p>
+              <div class='box' style='background-color:${hex}'></div>
+              </div>`,
+
+              `<div class='parent'>
+              <p>...then, you'll see a message indicating that you won the round.<br>
+              For instance, if you were to win Round 5, you'd see the following message:</p>
+              <p style='font-size:50pt; margin-bottom:70px'>You won Round 5</p><p style='font-size:30pt; margin:0px'>Round 6 will now begin</p>
+              </div>`,
+
+              `<div class='parent'>
+              <p>If you fail to activate the tile before the end of the round, you'll see a message indicating that you lost the round.<br>
+              For instance, if you were to lose Round 5, you'd see the following message:</p>
+              <p style='font-size:50pt; margin-bottom:70px'>You lost Round 5</p><p style='font-size:30pt; margin:0px'>Round 6 will now begin</p>
+              </div>`,
+
+              `<div class='parent'>
+              <p>To get a feel for the Tile Game, you'll complete a practice round.<br>
+              Once you proceed, the practice round will start, so get ready to press your SPACEBAR.</p>
+              <p>Continue to begin practicing.</p>
+              </div>`];
+      }
 
       if (gameType == 'bern') {
           html = [`<div class='parent'>
@@ -1152,7 +1223,7 @@ const dmPsych = (function() {
 
               `<div class='parent'>
               <p>First, the full version of the Tile Game will be ${easierOrHarder} than the practice version.<br>
-              Specifically, most players succeed at activating the tile <strong>${pM*100}%</strong> of the time.</p>
+              Specifically, most players activate the tile <strong>${pM*100}%</strong> of the time.</p>
               </div>`,
 
               `<div class='parent'>
@@ -1175,7 +1246,7 @@ const dmPsych = (function() {
 
               `<div class='parent'>
               <p>First, the full version of the Tile Game will be ${easierOrHarder} than the practice version.<br>
-              Specifically, most players succeed at activating the tile <strong>${pM*100}%</strong> of the time.</p>
+              Specifically, most players activate the tile <strong>${pM*100}%</strong> of the time.</p>
               </div>`,
 
               `<div class='parent'>
@@ -1188,6 +1259,27 @@ const dmPsych = (function() {
               fireworks display each time you end a streak.</p>
               <p>The amount of fireworks you get depends on the length of your streak.<br>
               The longer your streak, the more fireworks you'll get when it ends!</p>
+              </div>`];
+      };
+
+      if (gameType == '1inN') {
+          html = [`<div class='parent'>
+              <p>The full version of the Tile Game differs from the practice version in three ways.</p>
+              </div>`,
+
+              `<div class='parent'>
+              <p>First, the full version of the Tile Game will be ${easierOrHarder} than the practice version.<br>
+              Specifically, most players activate the tile <strong>${pM*100}%</strong> of the time.</p>
+              </div>`,
+
+              `<div class='parent'>
+              <p>Second, the full version of the Tile Game will be longer than the practice version.<br>
+              Specifically, you will have ${nTrials} chances to activate the tile.</p>
+              </div>`,     
+
+              `<div class='parent'>
+              <p>Third, in the full version of the Tile Game you'll be rewarded with a<br>
+              fireworks display each time you win a round!</p>
               </div>`];
       };
 
