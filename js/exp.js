@@ -385,7 +385,7 @@ var exp = (function() {
             pages: [
                 `<div class='parent'>
                     <p>Thank you for playing and evaluating our games!</p>
-                    <p>Next, you will finish the study by completing a few surveys.</p>
+                    <p>Next, you will finish the study by answering a few final questions.</p>
                 </div>`
             ],
             show_clickable_nav: true,
