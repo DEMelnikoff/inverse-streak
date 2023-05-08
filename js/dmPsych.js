@@ -657,6 +657,8 @@ const dmPsych = (function() {
     var { Engine, Render, Vertices, Composite, World, Bodies, Events, Mouse, MouseConstraint } = Matter;
     var engine = Engine.create();
 
+
+
     // temporary data
     var ballXtrial = [0];   // ball's X coordinates on current trial
     var ballYtrial = [0];   // ball's Y coordinate on current trial
@@ -678,6 +680,9 @@ const dmPsych = (function() {
       let mouse, mouseConstraint;
 
       let context = c.getContext('2d');
+
+      //engine.world.gravity.y = engine.world.gravity.y / fpsAdjust;
+      console.log(engine.world.gravity.y)
 
       // import settings
       var set = {
@@ -722,7 +727,7 @@ const dmPsych = (function() {
       // construct ball
       function Ball() {           
         this.body = Bodies.circle(set.ball.x, set.ball.y, set.ball.rad, { 
-          frictionAir: set.ball.fric,
+        //  frictionAir: set.ball.fric,
           render: {
             fillStyle: set.ball.col,
           }
