@@ -13,7 +13,6 @@ const dmPsych = (function() {
   window.jsPsych = initJsPsych({
     on_finish: () => {
       let boot = jsPsych.data.get().last(1).select('boot').values[0];
-      console.log(fpsAdjust);
       jsPsych.data.addProperties({fpsAdjust: fpsAdjust});
       if(!boot) {
         document.body.innerHTML = 
@@ -57,11 +56,11 @@ const dmPsych = (function() {
   */
 
   // logit function
-  obj.logit = (rate, k, x0, shift) => {
-    let x = rate
+  obj.logit = (rate, scale, k, shift, x0) => {
+    let x = rate / scale
     let denom = 1 + Math.exp(-k * (x - x0));
     let logit = 1 / denom;
-    let pPop = logit - shift;
+    let pPop = logit - shift
     return pPop;
   };
 
@@ -184,6 +183,8 @@ const dmPsych = (function() {
     let losses = 0, round = 1, streak = 0, trialNumber = 0, tooSlow = null, tooFast = null;
 
     const latency = dmPsych.makeRT(nTrials, pM, roundLength);
+
+    console.log(pM, latency);
 
     const intro = {
       type: jsPsychHtmlKeyboardResponse,
@@ -1330,111 +1331,74 @@ const dmPsych = (function() {
   obj.intro_raceForPrize = function({firstTaskName, effort, carSize, attnChkVars, correctAnswers}) {
 
     // html chunks for instructions
-    const trackImg = `<div style="position:relative; left: 0; right: 0; width: 500px; height: 250px; margin:auto; background: #D3D3D3">
-      <div style="position:absolute; top:50px; left:50px">
+    const trackImg = `<div style="position:relative; left: 0; right: 0; width: 500px; height: 350px; margin:auto">
+      <div style="position:absolute; top:10%; left:10%">
           <img src="img/myCar.png" style="height:${carSize[0]}px; width:${carSize[1]}px"></img>
       </div>
-      <div style="position:absolute; top:${250-carSize[0]-50}px; left:50px">
+
+      <div style="position:absolute; top:40%; left:10%">
           <img src="img/theirCar.png" style="height:${carSize[0]}px; width:${carSize[1]}px"></img>
       </div>
-      <div style="position:absolute; left:450px; height: 100%; width:5px; background:black">
+
+      <div style="position:absolute; top:5%; left:90%; height:50%; width:5px; background:black">
       </div></div>`;
 
-    const trackImg_pressLeft = `<div style="position:relative; left: 0; right: 0; width: 500px; height: 250px; margin:auto; background: #D3D3D3">
-      <div style="position:absolute; top:50px; left:50px">
+    const trackImg_pressLeft = `<div style="position:relative; left: 0; right: 0; width: 500px; height: 350px; margin:auto">
+      <div style="position:absolute; top:10%; left:10%">
           <img src="img/myCar.png" style="height:${carSize[0]}px; width:${carSize[1]}px"></img>
       </div>
-      <div style="position:absolute; top:${250-carSize[0]-50}px; left:50px">
+
+      <div style="position:absolute; top:40%; left:10%">
           <img src="img/theirCar.png" style="height:${carSize[0]}px; width:${carSize[1]}px"></img>
       </div>
-      <div style="position:absolute; left:450px; height: 100%; width:5px; background:black">
+
+      <div style="position:absolute; top:5%; left:90%; height:50%; width:5px; background:black">
       </div>
-      <div style="position:absolute; top:75px; left:-80px">
-        <p id="left-button" style="height:100px; width:50px; background:#b0fc38; border-style:solid; border-width:3px; border-color:black; display:table-cell; vertical-align:middle; margin-left:auto; font-size: 40px; margin-right:auto">E</p>
+
+      <div style="position:absolute; top:90%; left:30%; margin-top:-25px; margin-left:-25px; font-size:25px">
+          <p style="height:50px; width:50px; background:#ffa590; display:table-cell; vertical-align:middle; margin-left:auto; margin-right:auto">E</p>
       </div>
-      <div style="position:absolute; top:75px; width: 50px; left:530px">
-        <p id="right-button" style="height:100px; width:50px; background:white; border-style:solid; border-width:3px; border-color:black; display:table-cell; vertical-align:middle; margin-left:auto; font-size: 40px; margin-right:auto">I</p>
+
+      <div style="position:absolute; top:90%; left:70%; margin-top:-25px; margin-left:-25px; font-size:25px">
+          <p style="height:50px; width:50px; background:#a3a6a7; display:table-cell; vertical-align:middle; margin-left:auto; margin-right:auto">I</p>
       </div></div>`;
 
-    const trackImg_pressRight = `<div style="position:relative; left: 0; right: 0; width: 500px; height: 250px; margin:auto; background: #D3D3D3">
-      <div style="position:absolute; top:50px; left:50px">
+    const trackImg_pressRight = `<div style="position:relative; left: 0; right: 0; width: 500px; height: 350px; margin:auto">
+      <div style="position:absolute; top:10%; left:10%">
           <img src="img/myCar.png" style="height:${carSize[0]}px; width:${carSize[1]}px"></img>
       </div>
-      <div style="position:absolute; top:${250-carSize[0]-50}px; left:50px">
+
+      <div style="position:absolute; top:40%; left:10%">
           <img src="img/theirCar.png" style="height:${carSize[0]}px; width:${carSize[1]}px"></img>
       </div>
-      <div style="position:absolute; left:450px; height: 100%; width:5px; background:black">
+
+      <div style="position:absolute; top:5%; left:90%; height:50%; width:5px; background:black">
       </div>
-      <div style="position:absolute; top:75px; left:-80px">
-        <p id="left-button" style="height:100px; width:50px; background:white; border-style:solid; border-width:3px; border-color:black; display:table-cell; vertical-align:middle; margin-left:auto; font-size: 40px; margin-right:auto">E</p>
+
+      <div style="position:absolute; top:90%; left:30%; margin-top:-25px; margin-left:-25px; font-size:25px">
+          <p style="height:50px; width:50px; background:#a3a6a7; display:table-cell; vertical-align:middle; margin-left:auto; margin-right:auto">E</p>
       </div>
-      <div style="position:absolute; top:75px; width: 50px; left:530px">
-        <p id="right-button" style="height:100px; width:50px; background:#b0fc38; border-style:solid; border-width:3px; border-color:black; display:table-cell; vertical-align:middle; margin-left:auto; font-size: 40px; margin-right:auto">I</p>
+
+      <div style="position:absolute; top:90%; left:70%; margin-top:-25px; margin-left:-25px; font-size:25px">
+          <p style="height:50px; width:50px; background:#ffa590; display:table-cell; vertical-align:middle; margin-left:auto; margin-right:auto">I</p>
       </div></div>`;
 
-    const trackImg_pressNeither = `<div style="position:relative; left: 0; right: 0; width: 500px; height: 250px; margin:auto; background: #D3D3D3">
-      <div style="position:absolute; top:50px; left:50px">
-          <img src="img/myCar.png" style="height:${carSize[0]}px; width:${carSize[1]}px"></img>
-      </div>
-      <div style="position:absolute; top:${250-carSize[0]-50}px; left:50px">
-          <img src="img/theirCar.png" style="height:${carSize[0]}px; width:${carSize[1]}px"></img>
-      </div>
-      <div style="position:absolute; left:450px; height: 100%; width:5px; background:black">
-      </div>
-      <div style="position:absolute; top:75px; left:-80px">
-        <p id="left-button" style="height:100px; width:50px; background:white; border-style:solid; border-width:3px; border-color:black; display:table-cell; vertical-align:middle; margin-left:auto; font-size: 40px; margin-right:auto">E</p>
-      </div>
-      <div style="position:absolute; top:75px; width: 50px; left:530px">
-        <p id="right-button" style="height:100px; width:50px; background:white; border-style:solid; border-width:3px; border-color:black; display:table-cell; vertical-align:middle; margin-left:auto; font-size: 40px; margin-right:auto">I</p>
-      </div></div>`;
-
-    let effortMsg, practiceMsg, prompt_attnChk1;
+    let effortMsg;
 
     if (effort == 'high') {
-      effortMsg = [`<div class='parent'>
-        <p>To accelerate your car, you must press your E-key, then your I-key, one after the other.<br>
-        You'll need to press your keys as fast as possible in order to reach top speed.</p>
-        ${trackImg}              
-        </div>`,
-
-        `<div class='parent'>
-        <p>On the sides of your screen,<br>
-        you'll see cues that tell you which key to press.</p>
-        ${trackImg_pressNeither}              
-        </div>`];
-
-      practiceMsg = [`<div class='parent'>
-        <p>To get a feel for Race for the Prize, you'll complete two practice runs.</p>
-        <p>In the practice runs, you will not race against an opponent.<br>
-        You will simply practice accelerating by pressing the appropriate keys as fast as possible.</p>
-        <p>Continue to begin practicing.</p>
-        </div>`];
-
-      prompt_attnChk1 = `In order to reach top speed, I'll have to press my keys as fast as possible.`;
+      effortMsg = `<div class='parent'>
+      <p>The car you'll be driving is <strong>difficult</strong> to accelerate:<br>
+      To reach top speed, you'll need to press your keys <strong>as fast as possible</strong>.</p>
+      ${trackImg_pressRight}
+      </div>`;
     };
 
     if (effort == 'low') {
-      effortMsg = [`<div class='parent'>
-        <p>To accelerate your car, you must press your E-key, then your I-key, one after the other.<br>
-        You'll need to press each key at just the right moment in order to reach top speed.</p>
-        ${trackImg}              
-        </div>`,
-
-        `<div class='parent'>
-        <p>On the sides of your screen,<br>
-        you'll see cues that tell you when to press each key.</p>
-        ${trackImg_pressNeither}              
-        </div>`];
-
-      practiceMsg = [`<div class='parent'>
-        <p>To get a feel for Race for the Prize, you'll complete two practice runs.</p>
-        <p>In the practice runs, you will not race against an opponent.<br>
-        You will simply practice accelerating by pressing the appropriate keys as just the right moment.</p>
-        <p>Continue to begin practicing.</p>
-        </div>`];
-
-      prompt_attnChk1 = `In order to reach top speed, I'll have to press my keys at just the right moment.`;
-
+      effortMsg = `<div class='parent'>
+        <p>The car you'll be driving is <strong>easy</strong> to accelerate:<br>
+        To reach top speed, you'll only need to press your keys <strong>at a leisurely pace</strong>.</p>
+        ${trackImg_pressRight}
+        </div>`;
     };
 
     // instructions
@@ -1449,14 +1413,9 @@ const dmPsych = (function() {
       </div>`,
 
       `<div class='parent'>
-      <p>Each time you beat your opponent across the finish line, your victory will be celebrated with a fireworks display!</br>
-      For each race, your goal is to win a fireworks display by beating your opponent.</p>
+      <p>Your goal is to beat your opponent across the finish line.</br>
+      Each time you beat your opponent, you'll get a fireworks display!</p>
       ${trackImg}
-      </div>`,
-
-      `<div class='parent'>
-      <p>In Race for the Prize, players typically win about ${correctAnswers[1]} of their races.</p>
-      <p>To maximize <em>your</em> chances of winning, pay close attention to the upcoming information!</p>
       </div>`,
 
       `<div class='parent'>
@@ -1465,31 +1424,37 @@ const dmPsych = (function() {
       ${trackImg}
       </div>`,
 
-      ...effortMsg,
+      `<div class='parent'>
+      <p>To accelerate your car, you must press your E-key, then your I-key, one after the other.<br>
+      The faster your press the appropriate keys, the faster your car will go.</p>
+      ${trackImg}              
+      </div>`,
+
+      `<div class='parent'>
+      <p>On the bottom of your screen,<br>
+      you'll see a reminder of which key you must press to accelerate.</p>
+      ${trackImg}              
+      </div>`,
 
       `<div class='parent'>
       <p>When you need to press your E-key,<br>
-      the cue on the left will light up like this:</p>
+      the cue will look like this:</p>
       ${trackImg_pressLeft}
       </div>`,
 
       `<div class='parent'>
       <p>When you need to press your I-key,<br>
-      the cue on the right will light up like this:</p>
+      the cue will look like this:</p>
       ${trackImg_pressRight}
-      </div>`];
+      </div>`,
+
+      effortMsg];
 
     // attention check loop
 
     const inst = {
       type: jsPsychInstructions,
       pages: html,
-      show_clickable_nav: true,
-    };
-
-    const prePractice = {
-      type: jsPsychInstructions,
-      pages: practiceMsg,
       show_clickable_nav: true,
     };
 
@@ -1513,14 +1478,9 @@ const dmPsych = (function() {
       preamble: `<div style="font-size:16px"><p>To make sure you understand Race for the Prize, please indicate whether the following statement is true or false:</p></div>`,
       questions: [
         {
-          prompt: prompt_attnChk1, 
-          name: "attnChk1", 
-          options: ["True", "False"],
-        },
-        {
-          prompt: `What percentage of races do most players win?`, 
-          name: "attnChk2", 
-          options: ["0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%"],
+            prompt: `In order to reach top speed in Race for the Prize, I'll have to press my keys as fast as possible.`, 
+            name: "attnChk_part1", 
+            options: ["True", "False"],
         },
       ],
       scale_width: 500,
@@ -1548,29 +1508,11 @@ const dmPsych = (function() {
       },
     };
 
-    const instLoop = {
-      timeline: [conditionalNode1, inst, attnChk, conditionalNode2],
-      loop_function: () => {
-        const fail = jsPsych.data.get().last(2).select('totalErrors').sum() > 0 ? true : false;
-        return fail;
-      },
+    this.timeline = [conditionalNode1, inst, attnChk, conditionalNode2];
+    this.loop_function = () => {
+      const fail = jsPsych.data.get().last(2).select('totalErrors').sum() > 0 ? true : false;
+      return fail;
     };
-
-    this.timeline = [instLoop, prePractice];
-
-  };
-
-  obj.postPractice_raceForPrize = function({firstTaskName, effort, carSize, attnChkVars, correctAnswers}) {
-
-    const html = [`<div class='parent'>
-      <p>Practice is now complete. Next, you'll race against your opponent!</p>
-      <p>Remember: Your goal for each race is to win a fireworks display by beating your opponent.</p>
-      <p>Continue when you're ready to race.</p></div>`];
-
-    this.type = jsPsychInstructions;
-    this.pages = html;
-    this.show_clickable_nav = true;
-
   };
 
   return obj
