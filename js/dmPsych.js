@@ -681,9 +681,6 @@ const dmPsych = (function() {
 
       let context = c.getContext('2d');
 
-      //engine.world.gravity.y = engine.world.gravity.y / fpsAdjust;
-      console.log(engine.world.gravity.y)
-
       // import settings
       var set = {
         ball: {
