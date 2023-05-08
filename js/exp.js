@@ -473,7 +473,7 @@ var exp = (function() {
 
 }());
 
-const timeline = [exp.consent, exp.task1, exp.surveyIntro, 
+const timeline = [exp.consent, exp.surveyIntro, 
     exp.preFull_task1, exp.task1, exp.task1_Qs,
     exp.intro_task2, exp.prePractice_task2, exp.practice2, exp.practiceComplete, exp.postPractice_task2, exp.preTask_task2, exp.task2, exp.task2_Qs,
     exp.demographics, exp.save_data];
