@@ -13,8 +13,6 @@ const dmPsych = (function() {
   window.jsPsych = initJsPsych({
     on_finish: () => {
       let boot = jsPsych.data.get().last(1).select('boot').values[0];
-      console.log(fpsAdjust);
-      jsPsych.data.addProperties({fpsAdjust: fpsAdjust});
       if(!boot) {
         document.body.innerHTML = 
         `<div align='center' style="margin: 10%">
@@ -44,6 +42,7 @@ const dmPsych = (function() {
       frames++;
       if(frames == 120) { 
           fpsAdjust = (performance.now() - tic) / 2000;
+          jsPsych.data.addProperties({fpsAdjust: fpsAdjust});
           frames = 0;
           tic = performance.now();
       };
@@ -103,8 +102,8 @@ const dmPsych = (function() {
       };
       for (let n = 0; n < maxSparks; n++) {
         let spark = {
-          vx: Math.random() * 5 * (fpsAdjust * 2) + .5,
-          vy: Math.random() * 5 * (fpsAdjust * 2) + .5,
+          vx: Math.random() * 5 + .5,
+          vy: Math.random() * 5 + .5,
           weight: Math.random() * .3 + .03,
           red: Math.floor(Math.random() * 2 + 1),
           green: Math.floor(Math.random() * 2 + 1),
@@ -136,18 +135,18 @@ const dmPsych = (function() {
               let trailAge = firework.age + i;
               let x = firework.x + spark.vx * trailAge;
               let y = firework.y + spark.vy * trailAge + spark.weight * trailAge * spark.weight * trailAge;
-              let fade = i * 10 + firework.age * 2 * (2 * fpsAdjust) + 50;
-              let r = Math.floor(spark.red * fade * 1);
-              let g = Math.floor(spark.green * fade * 1);
-              let b = Math.floor(spark.blue * fade * 1);
+              let fade = i * 10 + firework.age * 2 + 50;
+              let r = Math.floor(spark.red * fade);
+              let g = Math.floor(spark.green * fade);
+              let b = Math.floor(spark.blue * fade);
               ctx.beginPath();
               ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',1)';
               ctx.rect(x, y, 5, 5);
               ctx.fill();
             }
           });
-          firework.age++;
-          if (firework.age > (100 / (2*fpsAdjust)) && Math.random() < .05) {
+          firework.age = firework.age + fpsAdjust;
+          if (firework.age > 50 && Math.random() < .05) {
             resetFirework(firework);
           }
         } else {
@@ -724,7 +723,7 @@ const dmPsych = (function() {
       // construct ball
       function Ball() {           
         this.body = Bodies.circle(set.ball.x, set.ball.y, set.ball.rad, { 
-        //  frictionAir: set.ball.fric,
+          frictionAir: set.ball.fric,
           render: {
             fillStyle: set.ball.col,
           }

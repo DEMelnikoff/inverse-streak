@@ -15,7 +15,7 @@ var exp = (function() {
         span: 'a-span',
         color: "green",
     };
-    
+
     settings.value = settings.val.toString();
     settings.plural = settings.val == 1 ? '' : 's'; 
     settings.wasWere = settings.val == 1 ? 'was' : 'were';
@@ -281,14 +281,14 @@ var exp = (function() {
         wall_color: '#797D7F',
         wall_xPos: .9,
         hole_size: 75,
-        friction: .02,
-        tension: .01,
+        friction: .01,
+        tension: .008,
         prompt: `<div class='instructions'>
 
         <p><strong>Hole in One</strong>. The goal of Hole in One is to shoot the ball through the hole.<br>
         Follow the instructions in the game area, then play Hole in One. 
         We'll let you know when time is up.</p></div>`,
-        data: {block: 'holeInOne'}
+        data: {block: 'holeInOne'},
     };
 
     p.practice2 = new dmPsych.MakeTileGame(settings, settings.gameType, 10, settings.pM_practice, 'practice');
@@ -473,7 +473,7 @@ var exp = (function() {
 
 }());
 
-const timeline = [exp.consent, exp.surveyIntro, 
+const timeline = [exp.consent, exp.task1, exp.surveyIntro, 
     exp.preFull_task1, exp.task1, exp.task1_Qs,
     exp.intro_task2, exp.prePractice_task2, exp.practice2, exp.practiceComplete, exp.postPractice_task2, exp.preTask_task2, exp.task2, exp.task2_Qs,
     exp.demographics, exp.save_data];
