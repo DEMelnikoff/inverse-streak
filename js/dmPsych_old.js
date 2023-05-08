@@ -12,13 +12,19 @@ const dmPsych = (function() {
   // initialize jsPsych
   window.jsPsych = initJsPsych({
     on_finish: () => {
+      const totalWins = jsPsych.data.get().filter({jackpot: true, block: 'tileGame'}).count();
+      const bonus = jsPsych.data.get().select('val').values[0]
+      const basePay = jsPsych.data.get().select('basePay').values[0]
+      const bonusEarnings = (totalWins * bonus) / 100
       let boot = jsPsych.data.get().last(1).select('boot').values[0];
       jsPsych.data.addProperties({fpsAdjust: fpsAdjust});
       if(!boot) {
         document.body.innerHTML = 
         `<div align='center' style="margin: 10%">
-            <p>Thank you for participating!</p>
-            <p><b>To receive payment, please wait while we redirect you to Prolific.</b></p>
+            <p>Thank you for participating!
+            <br>You earned a total of <strong>$${bonusEarnings}</strong> in bonus money.
+            <br>You will receive your bonus, in addition to <strong>$${basePay}</strong> for your participation, within 48 hours.<p>
+            <b>You will be automatically re-directed to Prolific in a few moments.</b>
         </div>`;
         setTimeout(() => { location.href = `https://app.prolific.co/submissions/complete?cc=${completionCode}` }, 4000);
       }
@@ -34,7 +40,7 @@ const dmPsych = (function() {
   obj.filename = `${subject_id}.csv`;
 
   // define completion code for Prolific
-  const completionCode = "C1ACNNE6";
+  const completionCode = "CB1K8YPV";
 
   // track fps
   let frames = 0, tic = performance.now(), fpsAdjust;
@@ -55,15 +61,6 @@ const dmPsych = (function() {
   *
   */
 
-  // logit function
-  obj.logit = (rate, scale, k, shift, x0) => {
-    let x = rate / scale
-    let denom = 1 + Math.exp(-k * (x - x0));
-    let logit = 1 / denom;
-    let pPop = logit - shift
-    return pPop;
-  };
-
   // save survey data in wide format
   obj.saveSurveyData = (data) => {
     const names = Object.keys(data.response);
@@ -81,110 +78,107 @@ const dmPsych = (function() {
     return totalErrors;
   };
 
-  // create fireworks display
-  obj.drawFireworks = function (c, duration, maxFireworks, message, fontSize) {
-
-    // get start time
-    const start = performance.now();
-
-    // get context
-    let ctx = c.getContext('2d');
-
-    // get text variables
-    const lines = message.split('\n');
-
-    const maxSparks = Math.min(maxFireworks*5, 60);
-    let fireworks = [];
-   
-    for (let i = 0; i < maxFireworks; i++) {
-      let firework = {
-        sparks: []
-      };
-      for (let n = 0; n < maxSparks; n++) {
-        let spark = {
-          vx: Math.random() * 5 * (fpsAdjust * 2) + .5,
-          vy: Math.random() * 5 * (fpsAdjust * 2) + .5,
-          weight: Math.random() * .3 + .03,
-          red: Math.floor(Math.random() * 2 + 1),
-          green: Math.floor(Math.random() * 2 + 1),
-          blue: Math.floor(Math.random() * 2 + 1)
-        };
-        if (Math.random() > .5) spark.vx = -spark.vx;
-        if (Math.random() > .5) spark.vy = -spark.vy;
-        firework.sparks.push(spark);
-      };
-      fireworks.push(firework);
-      resetFirework(firework);
-    };
-
-    let myReq = window.requestAnimationFrame(explode);
-   
-    function resetFirework(firework) {
-      firework.x = Math.floor(Math.random() * c.width);
-      firework.y = c.height;
-      firework.age = 0;
-      firework.phase = 'fly';
-    };
-     
-    function explode() {
-      ctx.clearRect(0, 0, c.width, c.height);
-      fireworks.forEach((firework,index) => {
-        if (firework.phase == 'explode') {
-            firework.sparks.forEach((spark) => {
-            for (let i = 0; i < 10; i++) {
-              let trailAge = firework.age + i;
-              let x = firework.x + spark.vx * trailAge;
-              let y = firework.y + spark.vy * trailAge + spark.weight * trailAge * spark.weight * trailAge;
-              let fade = i * 10 + firework.age * 2 * (2 * fpsAdjust) + 50;
-              let r = Math.floor(spark.red * fade * 1);
-              let g = Math.floor(spark.green * fade * 1);
-              let b = Math.floor(spark.blue * fade * 1);
-              ctx.beginPath();
-              ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',1)';
-              ctx.rect(x, y, 5, 5);
-              ctx.fill();
-            }
-          });
-          firework.age++;
-          if (firework.age > (100 / (2*fpsAdjust)) && Math.random() < .05) {
-            resetFirework(firework);
-          }
-        } else {
-          firework.y = firework.y - (10 * fpsAdjust * 2);
-          for (let spark = 0; spark < 15; spark++) {
-            ctx.beginPath();
-            ctx.fillStyle = 'rgba(' + (3 + index) * 50 + ',' + (3 + spark) * 17 + ',0,1)';
-            ctx.rect( firework.x + Math.random() * spark - spark / 2, firework.y + spark * 4, 5, 5);
-            ctx.fill();
-          }
-          if (Math.random() < .001 || firework.y < 200) firework.phase = 'explode';
-        }
-      });
-
-      for (let i = 0; i<lines.length; i++) {
-        ctx.fillStyle = 'black';
-        ctx.font = ["normal "+fontSize[0]+"pt Arial", "normal "+fontSize[1]+"pt Arial"][i]
-        let lineWidths = lines.map(x => ctx.measureText(x).width);
-        ctx.fillText(lines[i], (c.width/2) - (lineWidths[i]/2), c.height/2 + (i*120) - 60);
-      }
-
-      if (performance.now() - start < duration) { //note this also
-        myReq = window.requestAnimationFrame(explode);
-      } else {
-        cancelAnimationFrame(myReq);
-      };        
-    };
-
-  };
-
   // create tile game
   obj.MakeTileGame = function({val, plural, hex, tileHit, tileMiss, roundLength}, gameType, nTrials, pM, blockName) {
+
+    const drawFireworks = function (c, duration, maxFireworks, message, fontSize) {
+
+      // get start time
+      const start = performance.now();
+
+      // get context
+      let ctx = c.getContext('2d');
+
+      // get text variables
+      const lines = message.split('\n');
+
+      const maxSparks = Math.min(maxFireworks*5, 60);
+      let fireworks = [];
+     
+      for (let i = 0; i < maxFireworks; i++) {
+        let firework = {
+          sparks: []
+        };
+        for (let n = 0; n < maxSparks; n++) {
+          let spark = {
+            vx: Math.random() * 5 * (fpsAdjust * 2) + .5,
+            vy: Math.random() * 5 * (fpsAdjust * 2) + .5,
+            weight: Math.random() * .3 + .03,
+            red: Math.floor(Math.random() * 2 + 1),
+            green: Math.floor(Math.random() * 2 + 1),
+            blue: Math.floor(Math.random() * 2 + 1)
+          };
+          if (Math.random() > .5) spark.vx = -spark.vx;
+          if (Math.random() > .5) spark.vy = -spark.vy;
+          firework.sparks.push(spark);
+        }
+        fireworks.push(firework);
+        resetFirework(firework);
+      }
+
+      let myReq = window.requestAnimationFrame(explode);
+     
+      function resetFirework(firework) {
+        firework.x = Math.floor(Math.random() * c.width);
+        firework.y = c.height;
+        firework.age = 0;
+        firework.phase = 'fly';
+      };
+       
+      function explode() {
+        ctx.clearRect(0, 0, c.width, c.height);
+        fireworks.forEach((firework,index) => {
+          if (firework.phase == 'explode') {
+              firework.sparks.forEach((spark) => {
+              for (let i = 0; i < 10; i++) {
+                let trailAge = firework.age + i;
+                let x = firework.x + spark.vx * trailAge;
+                let y = firework.y + spark.vy * trailAge + spark.weight * trailAge * spark.weight * trailAge;
+                let fade = i * 10 + firework.age * 2 * (2 * fpsAdjust) + 50;
+                let r = Math.floor(spark.red * fade * 1);
+                let g = Math.floor(spark.green * fade * 1);
+                let b = Math.floor(spark.blue * fade * 1);
+                ctx.beginPath();
+                ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',1)';
+                ctx.rect(x, y, 5, 5);
+                ctx.fill();
+              }
+            });
+            firework.age++;
+            if (firework.age > (100 / (2*fpsAdjust)) && Math.random() < .05) {
+              resetFirework(firework);
+            }
+          } else {
+            firework.y = firework.y - (10 * fpsAdjust * 2);
+            for (let spark = 0; spark < 15; spark++) {
+              ctx.beginPath();
+              ctx.fillStyle = 'rgba(' + (3 + index) * 50 + ',' + (3 + spark) * 17 + ',0,1)';
+              ctx.rect( firework.x + Math.random() * spark - spark / 2, firework.y + spark * 4, 5, 5);
+              ctx.fill();
+            }
+            if (Math.random() < .001 || firework.y < 200) firework.phase = 'explode';
+          }
+        });
+
+        for (let i = 0; i<lines.length; i++) {
+          ctx.fillStyle = 'black';
+          ctx.font = ["normal "+fontSize[0]+"pt Arial", "normal "+fontSize[1]+"pt Arial"][i]
+          let lineWidths = lines.map(x => ctx.measureText(x).width);
+          ctx.fillText(lines[i], (c.width/2) - (lineWidths[i]/2), c.height/2 + (i*120) - 60);
+        }
+
+        if (performance.now() - start < duration) { //note this also
+          myReq = window.requestAnimationFrame(explode);
+        } else {
+          cancelAnimationFrame(myReq);
+        };        
+      };
+
+    };
 
     let losses = 0, round = 1, streak = 0, trialNumber = 0, tooSlow = null, tooFast = null;
 
     const latency = dmPsych.makeRT(nTrials, pM, roundLength);
-
-    console.log(pM, latency);
 
     const intro = {
       type: jsPsychHtmlKeyboardResponse,
@@ -347,7 +341,7 @@ const dmPsych = (function() {
           };
         };
 
-        return obj.drawFireworks(c, 3000, maxFireworks, message, fontSize)
+        return drawFireworks(c, 3000, maxFireworks, message, fontSize)
       },
       choices: "NO_KEYS",
       trial_duration: 3000,
@@ -979,7 +973,7 @@ const dmPsych = (function() {
           context.stroke();
         };
 
-        Engine.update(engine, (1000/60)*fpsAdjust);
+        Engine.update(engine, 16.666*fpsAdjust);
 
         if(game.data.totalTrials == trial.total_shots) {
           cancelAnimationFrame(req);
@@ -1326,193 +1320,6 @@ const dmPsych = (function() {
           <p>Continue to begin.</p>
           </div>`];
       return html;
-  };
-
-  obj.intro_raceForPrize = function({firstTaskName, effort, carSize, attnChkVars, correctAnswers}) {
-
-    // html chunks for instructions
-    const trackImg = `<div style="position:relative; left: 0; right: 0; width: 500px; height: 350px; margin:auto">
-      <div style="position:absolute; top:10%; left:10%">
-          <img src="img/myCar.png" style="height:${carSize[0]}px; width:${carSize[1]}px"></img>
-      </div>
-
-      <div style="position:absolute; top:40%; left:10%">
-          <img src="img/theirCar.png" style="height:${carSize[0]}px; width:${carSize[1]}px"></img>
-      </div>
-
-      <div style="position:absolute; top:5%; left:90%; height:50%; width:5px; background:black">
-      </div></div>`;
-
-    const trackImg_pressLeft = `<div style="position:relative; left: 0; right: 0; width: 500px; height: 350px; margin:auto">
-      <div style="position:absolute; top:10%; left:10%">
-          <img src="img/myCar.png" style="height:${carSize[0]}px; width:${carSize[1]}px"></img>
-      </div>
-
-      <div style="position:absolute; top:40%; left:10%">
-          <img src="img/theirCar.png" style="height:${carSize[0]}px; width:${carSize[1]}px"></img>
-      </div>
-
-      <div style="position:absolute; top:5%; left:90%; height:50%; width:5px; background:black">
-      </div>
-
-      <div style="position:absolute; top:90%; left:30%; margin-top:-25px; margin-left:-25px; font-size:25px">
-          <p style="height:50px; width:50px; background:#ffa590; display:table-cell; vertical-align:middle; margin-left:auto; margin-right:auto">E</p>
-      </div>
-
-      <div style="position:absolute; top:90%; left:70%; margin-top:-25px; margin-left:-25px; font-size:25px">
-          <p style="height:50px; width:50px; background:#a3a6a7; display:table-cell; vertical-align:middle; margin-left:auto; margin-right:auto">I</p>
-      </div></div>`;
-
-    const trackImg_pressRight = `<div style="position:relative; left: 0; right: 0; width: 500px; height: 350px; margin:auto">
-      <div style="position:absolute; top:10%; left:10%">
-          <img src="img/myCar.png" style="height:${carSize[0]}px; width:${carSize[1]}px"></img>
-      </div>
-
-      <div style="position:absolute; top:40%; left:10%">
-          <img src="img/theirCar.png" style="height:${carSize[0]}px; width:${carSize[1]}px"></img>
-      </div>
-
-      <div style="position:absolute; top:5%; left:90%; height:50%; width:5px; background:black">
-      </div>
-
-      <div style="position:absolute; top:90%; left:30%; margin-top:-25px; margin-left:-25px; font-size:25px">
-          <p style="height:50px; width:50px; background:#a3a6a7; display:table-cell; vertical-align:middle; margin-left:auto; margin-right:auto">E</p>
-      </div>
-
-      <div style="position:absolute; top:90%; left:70%; margin-top:-25px; margin-left:-25px; font-size:25px">
-          <p style="height:50px; width:50px; background:#ffa590; display:table-cell; vertical-align:middle; margin-left:auto; margin-right:auto">I</p>
-      </div></div>`;
-
-    let effortMsg;
-
-    if (effort == 'high') {
-      effortMsg = `<div class='parent'>
-      <p>The car you'll be driving is <strong>difficult</strong> to accelerate:<br>
-      To reach top speed, you'll need to press your keys <strong>as fast as possible</strong>.</p>
-      ${trackImg_pressRight}
-      </div>`;
-    };
-
-    if (effort == 'low') {
-      effortMsg = `<div class='parent'>
-        <p>The car you'll be driving is <strong>easy</strong> to accelerate:<br>
-        To reach top speed, you'll only need to press your keys <strong>at a leisurely pace</strong>.</p>
-        ${trackImg_pressRight}
-        </div>`;
-    };
-
-    // instructions
-    const html = [`<div class='parent'>
-      <p>Race for the Prize is played in multiple rounds.</p>
-      </div>`,
-
-      `<div class='parent'>
-      <p>In each round, you'll race your car against an opponent.<br>
-      You'll be driving the red car. Your opponent will be driving the blue car.</p>
-      ${trackImg}
-      </div>`,
-
-      `<div class='parent'>
-      <p>Your goal is to beat your opponent across the finish line.</br>
-      Each time you beat your opponent, you'll get a fireworks display!</p>
-      ${trackImg}
-      </div>`,
-
-      `<div class='parent'>
-      <p>To beat your opponent, you'll need to accelerate your car.<br>
-      &nbsp</p>
-      ${trackImg}
-      </div>`,
-
-      `<div class='parent'>
-      <p>To accelerate your car, you must press your E-key, then your I-key, one after the other.<br>
-      The faster your press the appropriate keys, the faster your car will go.</p>
-      ${trackImg}              
-      </div>`,
-
-      `<div class='parent'>
-      <p>On the bottom of your screen,<br>
-      you'll see a reminder of which key you must press to accelerate.</p>
-      ${trackImg}              
-      </div>`,
-
-      `<div class='parent'>
-      <p>When you need to press your E-key,<br>
-      the cue will look like this:</p>
-      ${trackImg_pressLeft}
-      </div>`,
-
-      `<div class='parent'>
-      <p>When you need to press your I-key,<br>
-      the cue will look like this:</p>
-      ${trackImg_pressRight}
-      </div>`,
-
-      effortMsg];
-
-    // attention check loop
-
-    const inst = {
-      type: jsPsychInstructions,
-      pages: html,
-      show_clickable_nav: true,
-    };
-
-    const preInstructions = {
-      type: jsPsychInstructions,
-      pages: [`<div class='parent'>
-      <p>Thank you for playing ${firstTaskName}!</p>
-      <p>Next, you'll play a different game called Race for the Prize.</p>
-      <p>When you're ready, please continue.</p></div>`],
-      show_clickable_nav: true,
-    }
-
-    const errorMessage = {
-      type: jsPsychInstructions,
-      pages: [`<div class='parent'><p>You provided the wrong answer.<br>To make sure you understand the game, please continue to re-read the instructions.</p></div>`],
-      show_clickable_nav: true,
-    };
-
-    const attnChk = {
-      type: jsPsychSurveyMultiChoice,
-      preamble: `<div style="font-size:16px"><p>To make sure you understand Race for the Prize, please indicate whether the following statement is true or false:</p></div>`,
-      questions: [
-        {
-            prompt: `In order to reach top speed in Race for the Prize, I'll have to press my keys as fast as possible.`, 
-            name: "attnChk_part1", 
-            options: ["True", "False"],
-        },
-      ],
-      scale_width: 500,
-      on_finish: (data) => {
-          const totalErrors = obj.getTotalErrors(data, correctAnswers);
-          data.totalErrors = totalErrors;
-      },
-    };
-
-    let showIntro = true;
-
-    const conditionalNode1 = {
-      timeline: [preInstructions],
-      conditional_function: () => {
-        return showIntro;
-      },
-    };
-
-    const conditionalNode2 = {
-      timeline: [errorMessage],
-      conditional_function: () => {
-        const fail = jsPsych.data.get().last(1).select('totalErrors').sum() > 0 ? true : false;
-        if (fail) { showIntro = false };
-        return fail;
-      },
-    };
-
-    this.timeline = [conditionalNode1, inst, attnChk, conditionalNode2];
-    this.loop_function = () => {
-      const fail = jsPsych.data.get().last(2).select('totalErrors').sum() > 0 ? true : false;
-      return fail;
-    };
   };
 
   return obj
