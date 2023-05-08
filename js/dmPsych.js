@@ -284,7 +284,7 @@ const dmPsych = (function() {
             message = 'You lost Round '+round+'\nRound '+(round + 1)+' will now begin';
             round++;          
           } else {
-            maxFireworks = blockName == 'practice' ? 0 : 5;
+            maxFireworks = blockName == 'practice' ? 0 : 6;
             fontSize = [50, 30];
             message = 'You won Round '+round+'\nRound '+(round + 1)+' will now begin';
             round++;          
@@ -304,7 +304,7 @@ const dmPsych = (function() {
             round++;
           } else {
             losses = 0;
-            maxFireworks = blockName == 'practice' ? 0 : 8;
+            maxFireworks = blockName == 'practice' ? 0 : 6;
             fontSize = [50, 30];
             message = 'You won Round '+round+'\nRound '+(round + 1)+' will now begin';
             round++;
