@@ -278,19 +278,21 @@ const dmPsych = (function() {
       stimulus: function(c) { 
         let maxFireworks, message, fontSize;
         if (gameType == 'bern') {
+          let nextRoundMsg = (trialNumber + 1 < nTrials) ? 'Round '+(round + 1)+' will now begin' : 'The game is now complete';
           if (tooSlow) {
             maxFireworks = 0;
             fontSize = [50, 30];
-            message = 'You lost Round '+round+'\nRound '+(round + 1)+' will now begin';
+            message = 'You lost Round '+round+'\n'+nextRoundMsg;
             round++;          
           } else {
             maxFireworks = blockName == 'practice' ? 0 : 6;
             fontSize = [50, 30];
-            message = 'You won Round '+round+'\nRound '+(round + 1)+' will now begin';
+            message = 'You won Round '+round+'\n'+nextRoundMsg;
             round++;          
           };
         }; 
         if (gameType == '1inN') {
+          let nextRoundMsg = (trialNumber + 1 < nTrials) ? 'Round '+(round + 1)+' will now begin' : 'The game is now complete';
           if (tooSlow && losses < 4) {
             losses++;
             maxFireworks = 0;
@@ -300,17 +302,18 @@ const dmPsych = (function() {
             losses = 0;
             maxFireworks = 0;
             fontSize = [50, 30];
-            message = 'You lost Round '+round+'\nRound '+(round + 1)+' will now begin';
+            message = 'You lost Round '+round+'\n'+nextRoundMsg;
             round++;
           } else {
             losses = 0;
             maxFireworks = blockName == 'practice' ? 0 : 6;
             fontSize = [50, 30];
-            message = 'You won Round '+round+'\nRound '+(round + 1)+' will now begin';
+            message = 'You won Round '+round+'\n'+nextRoundMsg;
             round++;
           };
         };
         if (gameType == 'invStrk') {
+          let nextRoundMsg = (trialNumber + 1 < nTrials) ? 'Get ready for the next round' : 'The game is now complete';
           if (tooSlow && losses < 4) {
             losses++;
             let triesLeft = roundLength - losses;
@@ -321,7 +324,7 @@ const dmPsych = (function() {
             losses = 0;
             maxFireworks = 0;
             fontSize = [50, 30];
-            message = 'You lost this round\nGet ready for the next round';
+            message = 'You lost this round\n'+nextRoundMsg;
           } else {
             let winIdx = ['1', '2', '3', '4', '5'][losses];
             maxFireworks = blockName == 'practice' ? 0 : [16, 8, 4, 2, 1][losses];
