@@ -650,21 +650,23 @@ const dmPsych = (function() {
   // function for drawing hole in one game on canvas
   obj.holeInOne = (function () {
 
-    var game = {};
+    let game = {};
 
     // import methods from matter.js and define physics engine
-    var { Engine, Render, Vertices, Composite, World, Bodies, Events, Mouse, MouseConstraint } = Matter;
-    var engine = Engine.create();
+    let { Engine, Render, Vertices, Composite, World, Bodies, Events, Mouse, MouseConstraint } = Matter;
+    let engine = Engine.create();
 
 
 
     // temporary data
-    var ballXtrial = [0];   // ball's X coordinates on current trial
-    var ballYtrial = [0];   // ball's Y coordinate on current trial
-    var endTrial = false; // flag whether the current trial is complete
-    var firing = false;   // flag whether the slingshot was fired
-    var inTheHole = false;  // flag whether the ball went through the hold
-    var intro = 0;        // use to determine which instructions to display during introduction
+    let ballXtrial = [0];   // ball's X coordinates on current trial
+    let ballYtrial = [0];   // ball's Y coordinate on current trial
+    let endTrial = false; // flag whether the current trial is complete
+    let firing = false;   // flag whether the slingshot was fired
+    let inTheHole = false;  // flag whether the ball went through the hold
+    let intro = 0;        // use to determine which instructions to display during introduction
+    let warning = false;  // warn user to stay in play area
+    let dragging = false; // true when user is drawing sling
 
     // data to save
     game.data = {
@@ -708,37 +710,15 @@ const dmPsych = (function() {
         }
       };
 
-      // create renderer
-      var render = Render.create({ 
-        engine: engine, 
-        canvas: c, 
-        options: {
-          height: set.canvas.height,
-          width: set.canvas.width,
-          wireframes: false,
-          writeText: text
-        },
-      });
-
       // construct ball
       function Ball() {           
-        this.body = Bodies.circle(set.ball.x, set.ball.y, set.ball.rad, { 
-          frictionAir: set.ball.fric,
-          render: {
-            fillStyle: set.ball.col,
-          }
-        });
+        this.body = Bodies.circle(set.ball.x, set.ball.y, set.ball.rad, { frictionAir: set.ball.fric });
         World.add(engine.world, this.body);
       };
 
       // construct target
       function Wall(y, tri) {
-        this.body = Bodies.fromVertices(set.wall.x, y, tri, {
-          isStatic: true,
-          render: {
-            fillStyle: set.wall.col,
-          }
-        });
+        this.body = Bodies.fromVertices(set.wall.x, y, tri, { isStatic: true });
         World.add(engine.world, this.body);
       };
 
@@ -754,19 +734,20 @@ const dmPsych = (function() {
 
       // construct mouse
       function makeMouse() {    
-        mouse = Mouse.create(render.canvas);
-        mouseConstraint = MouseConstraint.create(engine, {
-          mouse: mouse,
-          constraint: {
-            render: {visible: false}
-          }
-        });
+        mouse = Mouse.create(c);
+        mouseConstraint = MouseConstraint.create(engine, { mouse: mouse });
         World.add(engine.world, mouseConstraint);
-        render.mouse = mouse;
       };
 
       // construct text
       function text(c) {
+
+        if (warning) {
+          c.font = "bold 25px Arial";
+          c.fillStyle = 'red';
+          c.fillText("Please keep your mouse inside the play area.", 75, 350);          
+        }
+
         if (intro <= 3) {
           c.font = "bold 20px Arial";
           c.fillStyle = 'red';
@@ -800,24 +781,44 @@ const dmPsych = (function() {
       function shootSling() { 
         Events.on(mouseConstraint, 'startdrag', function(e) {
           tracker.ball = ball;
+          dragging = true;
           endTrial = false;
-          intro++;
+          if (!warning) {
+            intro++;
+          } else {
+            warning = false;
+          };
         });
         Events.on(mouseConstraint, 'enddrag', function(e) {
-          if(e.body === ball) firing = true;
+          if(e.body === ball) {
+            firing = true;
+            dragging = false;
+          };
         });
         Events.on(engine, 'beforeUpdate', function() {
           var xDelta = Math.abs(ball.position.x-set.ball.x);
           var yDelta = Math.abs(ball.position.y-set.ball.y);
           if(firing && xDelta < (set.ball.rad*2) && yDelta < (set.ball.rad*2)) {
             sling.bodyB = null;
-            sling.pointB.x = set.ball.x;
-            sling.pointB.y = set.ball.y;
             firing = false;
             intro++;
           };
         });
       };
+
+      c.addEventListener("mouseleave", () => {
+        // reset sling if player leaves canvas
+        if (dragging & !warning) {
+          warning = true;
+          World.remove(engine.world, ball)
+          ball = new Ball().body;
+          sling.bodyB = ball;
+          makeMouse();
+          shootSling();
+          trackBall();
+          recordData();
+        }
+      });
 
       // track location of ball
       function trackBall() {    
@@ -860,8 +861,6 @@ const dmPsych = (function() {
 
             // replace ball
             ball = new Ball().body;
-            sling.pointB.x = null;
-            sling.pointB.y = null;
             sling.bodyB = ball;
           };
         })
@@ -993,6 +992,213 @@ const dmPsych = (function() {
 
   }());
 
+  // function for drawing hole in one game on canvas
+  obj.float = (function () {
+
+    let game = {};
+
+    // import methods from matter.js and define physics engine
+    let { Engine, World, Bodies, Body, Composite, Events} = Matter;
+    let engine = Engine.create();
+
+    // data to save
+    game.data = {
+      ball_locs: [],   // ball's y position at each frame
+      tPress: [0],     // timestamp of each button press
+      nPress: 0,       // total number of button presses
+      glitch: [],      // true each time the ball leaves the canvas
+      score: [],       // array of points earned on each click
+      total_score: 0,  // sum of all points
+      press_rate: [],  // array of instantaneous rates of button-pressing
+      start_time: 0,   // time of first button-press
+    };
+
+    // run float game
+    game.run = function(c, trial) {
+      let ctx = c.getContext('2d');  // get context
+
+      // add bodies to world
+      let ceiling = Bodies.rectangle(c.width / 2, -30, c.width, 100, { isStatic: true });  // create ceiling
+      let floor = Bodies.rectangle(c.width / 2, c.height + 30, c.width, 100, { isStatic: true });  // create floor
+      let ball = Bodies.circle(c.width / 2, 280, trial.ball_size);  // create ball
+      engine.world.gravity.y = trial.gravity;  // set gravity
+      World.add(engine.world, [floor, ceiling, ball]);  // add to world
+
+      // force
+      let mid_pos = c.height / 2;  // middle of canvas
+      let bottom_pos = c.height - (trial.ball_size + 20);  // ball's position while on floor
+      let max_force = trial.target_force - trial.slope*(mid_pos - bottom_pos);  // maximum force given target force and slope
+      let force;
+
+      // outcomes
+      let outcomes = [];  // array of outcomes to display
+      ctx.font = "30px Arial";
+      let outcome_height = ctx.measureText(`+ 2`).actualBoundingBoxAscent + ctx.measureText(`+ 2`).actualBoundingBoxDescent; // height of outcome text
+
+      // zones
+      let rgb = [[240, 228, 66], [213, 94, 0], [0, 158, 115], [86, 180, 233]];  // color of each zone when at max luminance
+      let zone1_shift = -90;  // distance between top of zone 1 and middle of canvas
+      let zone_size = 63;  // height of each zone
+      let zone_values = [2, 10, 1, 3];  // points associated with each zone
+      let color_weight = [.5, .5, .5, .5];  // weights applied to colors used for zones     
+
+      // make new spark
+      function MakeOutcome(zone_idx, points) {
+        this.vx = Math.random() + 2;
+        this.vy = -3 - Math.random();
+        this.weight = .3;
+        this.age = 0;
+        this.zone_idx = zone_idx;
+        this.points = points;
+      };
+
+      // show outcome
+      function showOutcome() {
+        outcomes.forEach((outcome) => {
+          let y_init =  (c.height / 2) + zone1_shift + (60 * outcome.zone_idx) + 30 + (outcome_height / 2);
+          let x = (c.width / 2) + outcome.vx * outcome.age;
+          let y = y_init + outcome.vy * outcome.age + outcome.weight * outcome.age * outcome.weight * outcome.age;
+          ctx.beginPath();
+          ctx.font = "bold 45px Arial";
+          ctx.strokeStyle = 'black';
+          ctx.lineWidth = 2;
+          ctx.fillStyle = `rgb(${rgb[outcome.zone_idx][0]}, ${rgb[outcome.zone_idx][1]}, ${rgb[outcome.zone_idx][2]})`;
+          ctx.fillText(`+${outcome.points}`, x, y);    
+          ctx.strokeText(`+${outcome.points}`, x, y);    
+          outcome.age = outcome.age + (2 * fpsAdjust);
+        });
+      };
+
+      // track location of ball
+      Events.on(engine, "beforeUpdate", function() { 
+        if (ball.position.y > c.height || ball.position.y < 0) {
+          World.remove(engine.world, ball);
+          ball = Bodies.circle(c.width / 2, 280, trial.ball_size);
+          World.add(engine.world, ball);
+          game.data.glitch.push(true);
+        };
+        force =  Math.max(trial.target_force, max_force + (ball.position.y - bottom_pos)*trial.slope) * (.5 / fpsAdjust);
+        game.data.ball_locs.push(ball.position.y);
+      });
+
+      // keydown function
+      document.body.onkeydown = function(e) {
+        if (e.key == " " || e.code == "Space" || e.keyCode == 32) {
+
+          // time of each press in seconds from first press
+          if (game.data.nPress == 0) {
+            game.data.start_time = performance.now();
+          } else {
+            let press_time = (performance.now() - game.data.start_time) / 1000;
+            game.data.tPress.push(press_time);
+          };
+
+          game.data.nPress++;
+
+          // instantaneous press rate
+          if (game.data.tPress.length > 1) {
+            game.data.press_rate.push(1 / (game.data.tPress[game.data.tPress.length - 1] - game.data.tPress[game.data.tPress.length - 2]));
+          }
+
+          // press outcome (if button pressed in zone)
+          for (let z = 0; z < zone_values.length; z++) {
+            if (ball.position.y > (c.height / 2) + zone1_shift + (z * zone_size) & ball.position.y < (c.height / 2) + zone1_shift + ((z + 1) * zone_size)) {
+              color_weight[z] = 1;
+              game.data.score.push(zone_values[z]);
+              game.data.total_score = game.data.total_score + zone_values[z];
+              outcomes.push(new MakeOutcome(z, zone_values[z]));
+            };
+          };
+
+          // press outcome (if button not pressed in a zone)
+          if (color_weight.reduce((partialSum, a) => partialSum + a, 0) == 2) {
+            game.data.score.push(0);
+          };
+
+          // reset zone color after 100ms
+          setTimeout(() => { 
+            color_weight = [.5, .5, .5, .5];
+          }, 100);
+
+          // apply force to ball
+          Body.applyForce( ball, {x: ball.position.x, y: ball.position.y}, {x: 0, y: -force});
+   
+          console.log(game.data.press_rate.reduce((partialSum, a) => partialSum + a, 0) / game.data.press_rate.length);
+        };
+      };
+
+      function drawScore() {
+        ctx.fillStyle = '#D3D3D3';
+        let score_width = ctx.measureText(`Points: ${game.data.total_score}`).width;
+        ctx.fillText(`Points: ${game.data.total_score}`, (c.width / 2) - (score_width / 2), 80);   
+      };
+
+      function drawBodies() {
+        let bodies = Composite.allBodies(engine.world)
+        for (var i = 0; i < bodies.length; i += 1) {
+          ctx.beginPath();
+          ctx.fillStyle = 'white';
+          ctx.strokeStyle = 'white';
+          let body = bodies[i];
+          if(body.label != 'Circle Body') {
+            ctx.fillStyle = '#999';
+            ctx.strokeStyle = '#999';
+          };   
+          var vertices = bodies[i].vertices;
+          ctx.moveTo(vertices[0].x, vertices[0].y);
+          for (var j = 1; j < vertices.length; j += 1) {
+              ctx.lineTo(vertices[j].x, vertices[j].y);
+          };
+          ctx.lineTo(vertices[0].x, vertices[0].y);
+          ctx.fill();
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        };
+      };
+
+      function drawZones() {
+        for (let z = 0; z < zone_values.length; z++) {
+          ctx.fillStyle = `rgb(${rgb[z][0]*color_weight[z]}, ${rgb[z][1]*color_weight[z]}, ${rgb[z][2]*color_weight[z]})`
+          ctx.fillRect(0, (c.height / 2) + zone1_shift + (zone_size * z), c.width, zone_size);
+          ctx.fillStyle = 'black';
+          let text_width = ctx.measureText(`${zone_values[z]}`).width;
+          ctx.fillText(`${zone_values[z]}`, (c.width / 2) - (text_width / 2), (c.height / 2) + zone1_shift + (zone_size * z) + (zone_size / 2) + (outcome_height / 2));    
+        };        
+      };
+
+      function drawCircle() {
+        if (ball.position.y > (c.height / 2) - 80 & ball.position.y < (c.height / 2) + 80) {
+          ctx.strokeStyle = 'red';
+        } else {
+          ctx.strokeStyle = 'white';
+        };
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(c.width / 2, c.height / 2, 80, 0, 2 * Math.PI);
+        ctx.stroke();
+        ctx.lineWidth = 1;
+      };
+
+      (function render_func() {
+        const req = window.requestAnimationFrame(render_func);
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.font = "30px Arial";
+
+        drawZones();
+        drawScore();
+        showOutcome();
+        drawBodies();
+
+        Engine.update(engine, (1000/60)*fpsAdjust);
+
+      })();
+
+    };
+
+    return game;
+
+  }());
 
  /*
   *
@@ -1015,13 +1221,13 @@ const dmPsych = (function() {
         If you agree to take part, your participation in this study will involve answering a series of questions as well as making choices between different options that will be presented to you as part of study activities. We anticipate that your involvement will require 12-15 minutes.</p>
 
         <p><b>Compensation:</b><br>
-        You'll receive $${basePay} in exchange for your participation at the Yale SOM Lab.</p>
+        You'll receive $${basePay} in exchange for your participation.</p>
 
         <p><b>Risks and Benefits:</b><br>
         There are no known or anticipated risks associated with this study. Although this study will not benefit you personally, we hope that our results will add to the knowledge about judgment and decision-making.</p>
 
         <p><b>Confidentiality:</b><br>
-        All of your responses will be anonymous.  Only the researchers involved in this study and those responsible for research oversight will have access to any information that could identify you/that you provide. The researcher will not know your name, and no identifying information will be connected to your survey answers in any way. The survey is therefore anonymous.</p>
+        All of your responses will be anonymous.  Only the researchers involved in this study and those responsible for research oversight will have access to any information that could identify you/that you provide. The researcher will not know your name, and no identifying information will be connected to your survey answers in any way. The survey is therefore anonymous. However, your account is associated with an mTurk number that the researcher has to be able to see in order to pay you, and in some cases these numbers are associated with public profiles which could, in theory, be searched. For this reason, though the researcher will not be looking at anyone’s public profiles, the fact of your participation in the research (as opposed to your actual survey responses) is technically considered “confidential” rather than truly anonymous.”</p>
 
         <p><b>Voluntary Participation:</b><br>
         Your participation in this study is voluntary. You are free to decline to participate, to end your participation at any time for any reason, or to refuse to answer any individual question without penalty.</p>

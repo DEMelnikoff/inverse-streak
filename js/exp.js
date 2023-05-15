@@ -9,7 +9,7 @@ var exp = (function() {
         gameType: ['1inN', 'bern'][Math.floor(Math.random()*2)],
         val: 6,
         nTrials: 62,
-        basePay: 10,
+        basePay: 2.50,
         roundLength: 5,
         hex: '#00aa00',
         span: 'a-span',
